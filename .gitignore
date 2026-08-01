@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+.ruff_cache/
+.codegraph/
+.pi/
+.impeccable/
+__pycache__/
+*.py[cod]
+*.log
+.DS_Store

@@ -1,0 +1,46 @@
+{
+	"name": "pi-chisel",
+	"version": "0.1.0",
+	"private": true,
+	"description": "A native Pi prompt-optimizer extension for polishing unsent drafts.",
+	"type": "module",
+	"files": [
+		"src",
+		"README.md",
+		"docs"
+	],
+	"keywords": [
+		"pi-package"
+	],
+	"engines": {
+		"node": ">=22.19.0"
+	},
+	"pi": {
+		"extensions": [
+			"./src/index.ts"
+		]
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.0",
+		"@earendil-works/pi-ai": "0.83.0",
+		"@earendil-works/pi-coding-agent": "0.83.0",
+		"@earendil-works/pi-tui": "0.83.0",
+		"@types/node": "24.12.4",
+		"typescript": "5.9.3",
+		"vitest": "4.1.9"
+	},
+	"scripts": {
+		"format": "biome check --write src test package.json tsconfig.json --files-ignore-unknown=true",
+		"lint": "biome check src test package.json tsconfig.json --files-ignore-unknown=true",
+		"check": "tsc --noEmit",
+		"test": "vitest run",
+		"test:smoke": "python3 test/smoke-tui.py",
+		"smoke:configured": "bash test/smoke-configured.sh",
+		"validate": "npm run lint && npm run check && npm test && npm run test:smoke && npm run smoke:configured"
+	}
+}
