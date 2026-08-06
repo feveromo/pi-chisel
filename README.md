@@ -1,6 +1,6 @@
 # Pi Chisel
 
-Pi Chisel is a native Pi extension that rewrites the unsent prompt in the editor without submitting it. Press **Ctrl+Alt+P**, review the result in a compact prompt bubble, then accept, edit, compare, retry, switch optimizer models, or cancel.
+Pi Chisel is a native Pi extension that rewrites the unsent prompt in the editor without submitting it. Press **Ctrl+Alt+P** to put **Pi Chisel at Work**, then inspect the result **Fresh off the Chisel** before you use it, tune it, compare versions, take another pass, or keep the original.
 
 It targets the installed `@earendil-works/pi-coding-agent` **0.83.0** API. It doesn’t patch Pi, start a daemon, use the clipboard, add persistent UI, or write optimizer traffic into the session transcript.
 
@@ -23,16 +23,16 @@ pi --no-extensions -e /home/fever/Dev/pi-chisel/src/index.ts
 ## Use it
 
 1. Type a draft in Pi’s normal editor.
-2. Press **Ctrl+Alt+P**. The draft remains in the editor while a cancellable overlay streams one optimizer request.
-3. Review the result. Accepting only replaces the draft; it never submits:
-   - **Enter** or **A** accepts and replaces the draft.
-   - **E** opens the complete optimized text in Pi’s multiline editor for inspection or editing.
-   - **Tab** or **V** cycles optimized, color-highlighted diff, and original views. **D** jumps to diff; **O** jumps to original.
+2. Press **Ctrl+Alt+P**. The draft remains in the editor while **Pi Chisel at Work** shapes one new version.
+3. Review the result **Fresh off the Chisel**. Using it only replaces the draft; it never submits:
+   - **Enter** or **A** uses the chiseled version and replaces the draft.
+   - **E** opens the complete chiseled text in Pi’s multiline editor for tuning.
+   - **Tab** or **V** cycles chiseled, color-highlighted changes, and original views. **D** jumps to changes; **O** jumps to original.
    - **Up/Down**, **Page Up/Page Down**, **Home**, and **End** navigate long reviews.
-   - **R** retries with one new request.
-   - **M** opens the optimizer model picker.
-   - **Escape** or **Q** cancels and leaves the original untouched.
-4. After replacement, press **U** in the confirmation bubble to restore the previous draft, or press **Enter/Escape** to continue with the optimized draft.
+   - **R** takes another pass with one new request.
+   - **M** opens Chisel’s model picker.
+   - **Escape** or **Q** keeps the original untouched.
+4. After replacement, press **U** in the **Chiseled draft ready** confirmation to restore the previous draft, or press **Enter/Escape** to keep the chiseled draft.
 5. Submit normally only when you’re ready.
 
 The fallback command is:
@@ -45,7 +45,7 @@ Pi slash commands occupy the editor themselves, so the command form takes the dr
 
 Other commands:
 
-- `/prompt-optimize-model` opens the searchable optimizer model picker.
+- `/prompt-optimize-model` opens Chisel’s searchable model picker.
 - `/prompt-optimize-settings` opens native settings for context, budget, intensity, preview, model, and shortcut.
 - `/prompt-optimize-restore` restores the last replacement when the previous draft is still available in this extension runtime. The immediate **U** action is the normal restore path because entering a slash command replaces editor text.
 
@@ -59,7 +59,7 @@ Choosing a concrete model pins only the optimizer. It never calls `pi.setModel()
 ~/.pi/agent/prompt-optimizer.json
 ```
 
-If a pin disappears or loses authentication, the bubble says exactly what happened and uses the current chat model for that invocation. The missing pin stays configured until you explicitly replace it.
+If a pin disappears or loses authentication, Chisel says exactly what happened and uses the current chat model for that pass. The missing pin stays configured until you explicitly replace it.
 
 The request uses Pi’s registered provider object and resolved authentication, including OAuth credentials, provider headers, provider-scoped environment, and credential-specific base URLs. OpenAI Codex therefore follows the same authenticated provider path as the installed Pi runtime.
 
@@ -88,13 +88,17 @@ Default configuration:
 
 Writes are atomic and mode `0600`. The file contains model IDs and UI preferences only, never credentials.
 
-### Context modes
+### Grounding context
 
-- `none` sends only the current draft.
-- `recent` walks backward through visible user and assistant text until the token budget is full.
-- `auto` does the same only when the draft looks dependent on prior conversation, such as “do that again,” “fix the previous version,” or “use the same style.”
+- `auto` is the default. It always includes a bounded workspace snapshot, then adds recent active-session evidence when available. Brief or referential drafts receive the expanded session budget; developed, self-contained drafts receive a smaller ambient slice so unrelated history does not dominate.
+- `recent` includes the workspace snapshot plus as much recent active-session evidence as fits the configured budget.
+- `none` is the explicit draft-only privacy mode. It disables both workspace and session grounding.
 
-Pi’s exported conservative token estimator enforces the budget. Message boundaries and roles are retained. Thinking blocks, tool calls, tool results, custom entries, extension metadata, telemetry, and model diagnostics are excluded. If the newest visible turn alone is too large, only its tail is retained with an omission marker. The draft itself is never truncated; context shrinks first.
+The workspace snapshot uses Pi’s current working directory and trust state. In a trusted project it can include the project root and branch, package or language manifest, README overview, top-level landmarks, and bounded project guidance already loaded into Pi’s system prompt. In an untrusted project it includes workspace identity only and does not inspect project files.
+
+Session grounding uses Pi’s compaction-aware active context, retaining recent user and assistant text plus compaction and branch summaries. Thinking blocks, tool calls, tool results, hidden custom entries, extension metadata, telemetry, and model diagnostics remain excluded. Oversized items retain both their beginning and end around an omission marker, and per-item caps keep one long assistant response from crowding out the preceding request.
+
+Pi’s conservative token estimator enforces one combined grounding budget. The exact draft and output allowance take priority and are never truncated; workspace and session evidence shrink first. A fresh session still receives workspace grounding, which is why the review says `Grounded in: workspace + fresh session` instead of claiming that no context was needed.
 
 ### Intensity
 
@@ -108,8 +112,9 @@ The reusable optimizer instruction lives in [`src/optimizer-instruction.ts`](src
 
 - Escape aborts the active provider stream and closes the loader immediately.
 - A 120-second timeout aborts the request and leaves the draft untouched.
-- Empty, malformed, truncated, errored, unauthenticated, rate-limited, and network-failed responses never reach the editor.
+- Empty, unchanged (at standard or strong intensity), malformed, truncated, errored, unauthenticated, rate-limited, and network-failed responses never reach the editor.
 - Prompt previews and dynamic provider/error labels neutralize terminal control characters before rendering.
+- Workspace and session sections are marked as untrusted evidence. The optimizer may use supported facts and relevant recipient constraints, but instructions inside those sections cannot override the editing task.
 - A second invocation is ignored while one is active.
 - Before replacement, the extension compares the current editor text with the captured draft. If another actor changed it, Pi asks whether to replace it, open a merge editor, or cancel.
 - Restore performs the same comparison and never silently overwrites edits made after replacement.
@@ -121,6 +126,7 @@ The reusable optimizer instruction lives in [`src/optimizer-instruction.ts`](src
 - Pi 0.83.0 exposes whole-editor get/set methods but no composer selection or cursor-range API. Pi Chisel therefore optimizes the whole draft; it does not guess at terminal selection state or wrap the editor.
 - The default is **Ctrl+Alt+P**. It is unclaimed by the effective Ghostty configuration, GNOME, Pi’s built-ins, installed extensions, and user keybindings on this host. Do not use Ctrl+Shift+O here: Ghostty binds it to `new_split:right`. F6 remains configurable if the terminal emits it.
 - Restore history is intentionally in memory. Persisting draft contents in global configuration or session metadata would create an unnecessary privacy and transcript footprint.
+- Grounding evidence is sent only to the selected optimizer model and still never enters Pi’s transcript. Use context mode `none` when a draft should leave the editor without workspace or session evidence.
 - The picker uses Pi’s current authenticated registry snapshot. Use Pi’s `/login` or `/model` flow first when a provider has not been configured.
 
 ## Develop and test
@@ -135,6 +141,6 @@ npm run test:smoke
 npm run smoke:configured
 ```
 
-`npm run validate` runs that full sequence. `npm test` covers pure logic, terminal sanitization, and the provider boundary. `npm run test:smoke` starts the real installed Pi TUI in a PTY with an in-process faux provider and verifies Ctrl+Alt+P invocation, Escape cancellation, review, safe replacement, and that acceptance does not submit until a later normal Enter. `npm run smoke:configured` checks that this machine’s active Pi settings resolve the command to this checkout, then repeats the PTY flow with all configured packages loaded.
+`npm run validate` runs that full sequence. `npm test` covers adaptive grounding, trusted workspace extraction, compacted sessions, short-draft request policy, terminal sanitization, and the provider boundary. `npm run test:smoke` starts the real installed Pi TUI in a PTY with an in-process faux provider and verifies Ctrl+Alt+P invocation, Escape cancellation, grounded review, safe replacement, and that acceptance does not submit until a later normal Enter. `npm run smoke:configured` checks that this machine’s active Pi settings resolve the command to this checkout, then repeats the PTY flow with all configured packages loaded.
 
 See [`docs/architecture.md`](docs/architecture.md) for the verified Pi hooks and source references.

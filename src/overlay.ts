@@ -13,7 +13,7 @@ import {
 	type ModelPickerResult,
 	OptimizerModelPicker,
 	OptimizerSettingsComponent,
-	PromptBubbleChoice,
+	PromptChoiceComponent,
 	PromptReviewComponent,
 	type ReviewAction,
 	type SettingsResult,
@@ -25,7 +25,7 @@ export interface InvocationHandle {
 	dismiss: (() => void) | undefined;
 }
 
-export const PROMPT_BUBBLE_OVERLAY = {
+export const PROMPT_OVERLAY = {
 	overlay: true,
 	overlayOptions: {
 		width: "72%" as const,
@@ -53,7 +53,7 @@ export async function showChoice(
 					done(value);
 				};
 				if (invocation) invocation.dismiss = () => finish(undefined);
-				return new PromptBubbleChoice(
+				return new PromptChoiceComponent(
 					tui,
 					theme,
 					title,
@@ -63,7 +63,7 @@ export async function showChoice(
 					escapeLabel,
 				);
 			},
-			PROMPT_BUBBLE_OVERLAY,
+			PROMPT_OVERLAY,
 		);
 	} finally {
 		if (invocation) invocation.dismiss = undefined;
@@ -115,7 +115,7 @@ export async function showReview(
 					onAction: finish,
 				});
 			},
-			PROMPT_BUBBLE_OVERLAY,
+			PROMPT_OVERLAY,
 		);
 	} finally {
 		invocation.dismiss = undefined;
@@ -147,7 +147,7 @@ export async function showModelPicker(
 					finish,
 				);
 			},
-			PROMPT_BUBBLE_OVERLAY,
+			PROMPT_OVERLAY,
 		);
 	} finally {
 		if (invocation) invocation.dismiss = undefined;
@@ -173,7 +173,7 @@ export async function showSettingsOverlay(
 				done,
 			);
 		},
-		PROMPT_BUBBLE_OVERLAY,
+		PROMPT_OVERLAY,
 	);
 }
 

@@ -35,7 +35,7 @@ export function wrapPlainText(text: string, width: number): string[] {
 	return wrapTextWithAnsi(safe, Math.max(1, width));
 }
 
-export function bubbleFrame(
+export function overlayFrame(
 	theme: Theme,
 	width: number,
 	body: string[],

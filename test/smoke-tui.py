@@ -156,36 +156,45 @@ if process.poll() is not None:
 # Escape must cancel an active request and preserve the original editor draft.
 send(b"slow original")
 send(b"\x1b[112;7u")  # Ctrl+Alt+P in Kitty CSI-u form
-wait_for("Polishing your prompt")
+wait_for("Pi Chisel at Work")
+wait_for("Shaping a sharper prompt")
 send(b"\x1b")
 pump(0.5)
-if "OPTIMIZED" in decoded():
-    fail("A cancelled optimizer request reached the review screen")
+if "Fresh off the Chisel" in decoded():
+    fail("A cancelled Chisel pass reached the review screen")
 if "slow original" not in plain_tail():
-    fail("Cancelling the optimizer did not preserve the original draft")
+    fail("Cancelling Chisel did not preserve the original draft")
 
 # Clear the preserved draft, then exercise review, replacement, and explicit submission.
 send(b"\x03")  # Ctrl+C clears the editor
 send(b"make this clearer")
 send(b"\x1b[112::112;7u")  # Alternate-key form emitted by enhanced terminals
-wait_for("OPTIMIZED")
+wait_for("Fresh off the Chisel")
+wait_for("CHISELED")
 wait_for("Please make this clearer")
-wait_for("no context needed")
-wait_for("Accept replaces text without submitting")
-wait_for("open full text")
+wait_for("Grounded in: workspace")
+wait_for("fresh session")
+wait_for("Still unsent")
+wait_for("nothing gets submitted")
+wait_for("use this")
+wait_for("tune it")
+wait_for("another pass")
+wait_for("switch model")
+wait_for("keep original")
 send(b"\t")
-wait_for("DIFF")
+wait_for("CHANGES")
 wait_for("--- original")
-wait_for("+++ optimized")
+wait_for("+++ chiseled")
 send(b"\t")
 wait_for("ORIGINAL")
-send(b"\r")  # Accept in the review bubble; this must not submit.
-wait_for("Prompt replaced")
+send(b"\r")  # Use the chiseled draft; this must not submit.
+wait_for("Chiseled draft ready")
+wait_for("Still unsent. Submit normally when it looks right.")
 wait_for("esc close")
-send(b"\r")  # Keep the optimized draft and close the immediate-undo bubble.
+send(b"\r")  # Keep the chiseled draft and close the confirmation overlay.
 pump(0.6)
 if "MAIN RECEIVED:" in decoded():
-    fail("Accepting the optimized draft submitted it to the conversation")
+    fail("Using the chiseled draft submitted it to the conversation")
 
 send(b"\r")  # Explicit normal editor submission.
 wait_for("MAIN RECEIVED: Please make this clearer", timeout=8.0)
@@ -203,5 +212,5 @@ if process.returncode != 0:
 runtime_label = "configured package" if configured_runtime else "isolated extension"
 print(
     f"Pi TUI smoke test passed ({runtime_label}): Ctrl+Alt+P, Escape cancellation, "
-    "diff/original review, replacement, and explicit submission."
+    "chiseled/changes/original review, replacement, and explicit submission."
 )

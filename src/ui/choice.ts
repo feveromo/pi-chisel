@@ -18,7 +18,7 @@ export interface ChoiceOption {
 	key?: string;
 }
 
-export class PromptBubbleChoice extends Container {
+export class PromptChoiceComponent extends Container {
 	readonly width = 72;
 	private readonly list: SelectList;
 

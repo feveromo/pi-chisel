@@ -1,38 +1,30 @@
 import type { SessionEntry } from "@earendil-works/pi-coding-agent";
 import type { ContextMode } from "./config.ts";
 import {
+	type ConversationReference,
 	estimateTextTokens,
-	type OptimizationReference,
 } from "./request-builder.ts";
 
-export interface VisibleTurn {
-	role: "user" | "assistant";
+export type VisibleContextRole =
+	| "user"
+	| "assistant"
+	| "session-summary"
+	| "branch-summary";
+
+export interface VisibleContextItem {
+	role: VisibleContextRole;
 	text: string;
 }
 
 type ContextReason =
 	| "disabled"
-	| "not-referential"
-	| "no-visible-turns"
+	| "no-visible-items"
 	| "budget-exhausted"
 	| "included";
 
 export interface ContextBuildResult {
-	reference?: OptimizationReference;
+	reference?: ConversationReference;
 	reason: ContextReason;
-}
-
-const REFERENTIAL_PATTERNS = [
-	/\b(?:again|previous|prior|earlier|above|last time|same (?:style|format|approach|way)|as before)\b/i,
-	/\b(?:do|fix|change|rewrite|improve|continue|finish|repeat|restore|revert|use)\s+(?:it|that|this|those|them)\b/i,
-	/\b(?:that|this|it|those|these)\s+(?:one|version|draft|result|answer|response|implementation|plan|style)\b/i,
-	/\b(?:the previous|the last|what you|you just|we discussed|we decided)\b/i,
-];
-
-export function draftNeedsConversationContext(draft: string): boolean {
-	const normalized = draft.trim();
-	if (!normalized) return false;
-	return REFERENTIAL_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 function textBlocks(content: unknown): string[] {
@@ -55,90 +47,113 @@ function textBlocks(content: unknown): string[] {
 	return result;
 }
 
-export function extractVisibleTurns(
+export function extractVisibleContextItems(
 	entries: readonly SessionEntry[],
-): VisibleTurn[] {
-	const turns: VisibleTurn[] = [];
+): VisibleContextItem[] {
+	const items: VisibleContextItem[] = [];
 	for (const entry of entries) {
+		if (entry.type === "compaction") {
+			const text = entry.summary.trim();
+			if (text) items.push({ role: "session-summary", text });
+			continue;
+		}
+		if (entry.type === "branch_summary") {
+			const text = entry.summary.trim();
+			if (text) items.push({ role: "branch-summary", text });
+			continue;
+		}
 		if (entry.type !== "message") continue;
+
 		const message = entry.message;
 		if (message.role !== "user" && message.role !== "assistant") continue;
-
 		const text = textBlocks(message.content).join("\n").trim();
-		if (text) turns.push({ role: message.role, text });
+		if (text) items.push({ role: message.role, text });
 	}
-	return turns;
+	return items;
 }
 
-function formatTurn(turn: VisibleTurn): string {
-	const label = turn.role.toUpperCase();
-	return `[${label}]\n${turn.text}\n[/${label}]`;
+function contextLabel(role: VisibleContextRole): string {
+	return role.toUpperCase().replaceAll("-", "_");
 }
 
-function truncateNewestTurn(
-	turn: VisibleTurn,
+function formatContextItem(item: VisibleContextItem): string {
+	const label = contextLabel(item.role);
+	return `[${label}]\n${item.text}\n[/${label}]`;
+}
+
+function truncateContextItem(
+	item: VisibleContextItem,
 	budget: number,
 ): string | undefined {
-	const label = turn.role.toUpperCase();
-	const prefix = `[${label}]\n[… earlier content omitted …]\n`;
+	const label = contextLabel(item.role);
+	const prefix = `[${label}]\n`;
+	const omission = "\n[… middle content omitted …]\n";
 	const suffix = `\n[/${label}]`;
-	const framingTokens = estimateTextTokens(prefix + suffix);
+	const framingTokens = estimateTextTokens(prefix + omission + suffix);
 	if (framingTokens >= budget) return undefined;
 
 	let characterBudget = Math.max(1, (budget - framingTokens) * 4);
-	let candidate = `${prefix}${turn.text.slice(-characterBudget)}${suffix}`;
-	while (estimateTextTokens(candidate) > budget && characterBudget > 1) {
-		characterBudget = Math.max(1, characterBudget - 4);
-		candidate = `${prefix}${turn.text.slice(-characterBudget)}${suffix}`;
+	let candidate = "";
+	while (characterBudget > 0) {
+		const headCharacters = Math.max(1, Math.floor(characterBudget * 0.35));
+		const tailCharacters = Math.max(1, characterBudget - headCharacters);
+		candidate = `${prefix}${item.text.slice(0, headCharacters)}${omission}${item.text.slice(-tailCharacters)}${suffix}`;
+		if (estimateTextTokens(candidate) <= budget) return candidate;
+		characterBudget -= Math.max(1, Math.ceil(characterBudget * 0.08));
 	}
-	return estimateTextTokens(candidate) <= budget ? candidate : undefined;
+	return undefined;
 }
 
 export function buildConversationReference(
 	entries: readonly SessionEntry[],
-	draft: string,
 	mode: ContextMode,
 	tokenBudget: number,
 ): ContextBuildResult {
 	if (mode === "none") return { reason: "disabled" };
-	if (mode === "auto" && !draftNeedsConversationContext(draft))
-		return { reason: "not-referential" };
 	if (tokenBudget <= 0) return { reason: "budget-exhausted" };
 
-	const turns = extractVisibleTurns(entries);
-	if (turns.length === 0) return { reason: "no-visible-turns" };
+	const items = extractVisibleContextItems(entries);
+	if (items.length === 0) return { reason: "no-visible-items" };
 
-	const selected: string[] = [];
+	const selectedText: string[] = [];
+	const selectedItems: VisibleContextItem[] = [];
 	let tokens = 0;
-	for (let index = turns.length - 1; index >= 0; index -= 1) {
-		const turn = turns[index];
-		if (!turn) continue;
-		const formatted = formatTurn(turn);
-		const turnTokens = estimateTextTokens(formatted);
+	const perItemBudget = Math.max(48, Math.floor(tokenBudget * 0.58));
 
-		if (tokens + turnTokens > tokenBudget) {
-			if (selected.length === 0) {
-				const truncated = truncateNewestTurn(turn, tokenBudget);
-				if (truncated) {
-					selected.unshift(truncated);
-					tokens = estimateTextTokens(truncated);
-				}
-			}
-			break;
-		}
+	for (let index = items.length - 1; index >= 0; index -= 1) {
+		const item = items[index];
+		if (!item) continue;
+		const remaining = tokenBudget - tokens;
+		if (remaining <= 0) break;
 
-		selected.unshift(formatted);
-		tokens += turnTokens;
+		const allowance =
+			index > 0 ? Math.min(remaining, perItemBudget) : remaining;
+		const formatted = formatContextItem(item);
+		const rendered =
+			estimateTextTokens(formatted) <= allowance
+				? formatted
+				: truncateContextItem(item, allowance);
+		if (!rendered) break;
+
+		selectedText.unshift(rendered);
+		selectedItems.unshift(item);
+		tokens += estimateTextTokens(rendered);
 	}
 
-	if (selected.length === 0) return { reason: "budget-exhausted" };
-	const text = selected.join("\n\n");
+	if (selectedText.length === 0) return { reason: "budget-exhausted" };
+	const text = selectedText.join("\n\n");
 	return {
 		reason: "included",
 		reference: {
 			text,
-			turnCount: selected.length,
 			estimatedTokens: estimateTextTokens(text),
+			messageCount: selectedItems.filter(
+				(item) => item.role === "user" || item.role === "assistant",
+			).length,
+			summaryCount: selectedItems.filter(
+				(item) =>
+					item.role === "session-summary" || item.role === "branch-summary",
+			).length,
 		},
 	};
 }

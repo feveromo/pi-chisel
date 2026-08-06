@@ -153,7 +153,7 @@ export function parseOptimizerConfig(value: unknown): ParsedConfig {
 	if (!isRecord(value)) {
 		return {
 			config: { ...DEFAULT_OPTIMIZER_CONFIG },
-			warning: "Optimizer config is not a JSON object; defaults are active.",
+			warning: "Pi Chisel's config is not a JSON object; defaults are active.",
 		};
 	}
 
@@ -239,7 +239,7 @@ export function parseOptimizerConfig(value: unknown): ParsedConfig {
 	const settingLabel = invalid.length === 1 ? "setting" : "settings";
 	return {
 		config,
-		warning: `Ignored invalid optimizer ${settingLabel}: ${invalid.join(", ")}.`,
+		warning: `Ignored invalid Chisel ${settingLabel}: ${invalid.join(", ")}.`,
 	};
 }
 

@@ -16,7 +16,7 @@ import {
 
 export const OPTIMIZER_REQUEST_TIMEOUT_MS = 120_000;
 export const OPTIMIZER_TIMEOUT_MESSAGE =
-	"The optimizer timed out. Your original draft is still untouched.";
+	"Chisel timed out. Your original draft is still untouched.";
 
 export class PromptOptimizationError extends Error {
 	constructor(message: string) {
@@ -85,7 +85,7 @@ async function consumeOptimizationStream(
 				if (event.reason === "aborted" || signal.aborted)
 					throw new PromptOptimizationCancelledError();
 				throw new PromptOptimizationError(
-					event.error.errorMessage || "The optimizer model returned an error.",
+					event.error.errorMessage || "Chisel's model returned an error.",
 				);
 			}
 		}
@@ -97,7 +97,7 @@ async function consumeOptimizationStream(
 	if (signal.aborted) throw new PromptOptimizationCancelledError();
 	if (!finalMessage)
 		throw new PromptOptimizationError(
-			"The optimizer stream ended without a final response.",
+			"Chisel's stream ended without a final response.",
 		);
 	return finalMessage;
 }
@@ -105,23 +105,27 @@ async function consumeOptimizationStream(
 function validateOptimizationResponse(
 	finalMessage: AssistantMessage,
 	draft: string,
+	intensity: OptimizerIntensity,
 ): string {
 	if (finalMessage.stopReason === "length") {
 		throw new PromptOptimizationError(
-			"The optimizer response hit its output limit, so the original draft was left untouched.",
+			"Chisel hit its output limit, so the original draft was left untouched.",
 		);
 	}
 	if (finalMessage.stopReason !== "stop") {
 		throw new PromptOptimizationError(
-			`The optimizer stopped unexpectedly (${finalMessage.stopReason}).`,
+			`Chisel stopped unexpectedly (${finalMessage.stopReason}).`,
 		);
 	}
 
 	const optimized = stripAccidentalFence(responseText(finalMessage), draft);
 	if (!optimized.trim())
+		throw new PromptOptimizationError("Chisel returned an empty prompt.");
+	if (intensity !== "light" && optimized.trim() === draft.trim()) {
 		throw new PromptOptimizationError(
-			"The optimizer returned an empty prompt.",
+			"Chisel returned the draft unchanged, so the original was left untouched.",
 		);
+	}
 	return optimized;
 }
 
@@ -149,7 +153,11 @@ export async function runPromptOptimization(
 	if (signal.aborted) throw new PromptOptimizationCancelledError();
 
 	const request = buildOptimizationRequest(draft, reference, intensity);
-	const maxTokens = calculateMaxOutputTokens(draft, model.maxTokens);
+	const maxTokens = calculateMaxOutputTokens(
+		draft,
+		model.maxTokens,
+		Boolean(model.reasoning),
+	);
 	if (request.estimatedInputTokens + maxTokens + 4096 > model.contextWindow) {
 		throw new PromptOptimizationError(
 			`The draft is too long for ${model.provider}/${model.id} without truncating it. Choose a model with a larger context window.`,
@@ -159,6 +167,8 @@ export async function runPromptOptimization(
 	let stream: AssistantMessageEventStream;
 	try {
 		stream = provider.streamSimple(requestModel, request.context, {
+			...(!model.reasoning ? { temperature: 0.2 } : {}),
+			...(model.reasoning ? { reasoning: "minimal" as const } : {}),
 			...(auth.apiKey ? { apiKey: auth.apiKey } : {}),
 			...(auth.headers ? { headers: auth.headers } : {}),
 			...(auth.env ? { env: auth.env } : {}),
@@ -180,18 +190,18 @@ export async function runPromptOptimization(
 		signal,
 		onTextDelta,
 	);
-	return validateOptimizationResponse(finalMessage, draft);
+	return validateOptimizationResponse(finalMessage, draft, intensity);
 }
 
 export function friendlyOptimizationError(error: unknown): string {
 	const message = error instanceof Error ? error.message : String(error);
 	if (/429|rate.?limit/i.test(message))
-		return "The optimizer model is rate-limited. Your original draft is still untouched.";
+		return "Chisel's model is rate-limited. Your original draft is still untouched.";
 	if (/401|403|unauth|api key|credential|login/i.test(message)) {
-		return `Pi could not authenticate the optimizer model: ${message}`;
+		return `Pi could not authenticate Chisel's model: ${message}`;
 	}
 	if (/network|fetch|socket|econn|enotfound|timed?\s*out/i.test(message)) {
-		return `The optimizer could not reach the provider: ${message}`;
+		return `Chisel could not reach the provider: ${message}`;
 	}
 	return message;
 }

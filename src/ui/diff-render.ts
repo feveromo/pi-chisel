@@ -64,7 +64,7 @@ export function renderPromptDiffRows(
 	return [
 		theme.fg("dim", "--- original"),
 		...sideRows(diff, "before", theme, width),
-		theme.fg("dim", "+++ optimized"),
+		theme.fg("dim", "+++ chiseled"),
 		...sideRows(diff, "after", theme, width),
 	];
 }

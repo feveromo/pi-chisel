@@ -24,7 +24,7 @@ function createReview(original: string, optimized: string) {
 			optimized,
 			initialView: "optimized",
 			modelRef: "test/model",
-			contextSummary: "no context needed",
+			contextSummary: "workspace + fresh session · ~320 context tokens",
 			onAction,
 		},
 	);
@@ -40,14 +40,20 @@ describe("prompt review", () => {
 		const { component } = createReview("old", "new");
 		const output = rendered(component);
 
-		expect(output).toContain("Draft only · Accept replaces text without");
-		expect(output).toContain("submitting");
-		expect(output).toContain("accept");
-		expect(output).toContain("open full text");
+		expect(output).toContain("Fresh off the Chisel");
+		expect(output).toContain("Model: test/model");
+		expect(output).toContain("Grounded in: workspace + fresh session");
+		expect(output).toContain("Still unsent · Enter replaces your draft");
+		expect(output).toContain("nothing gets submitted");
+		expect(output).toContain("CHISELED");
+		expect(output).toContain("use this");
+		expect(output).toContain("tune it");
 		expect(output).toContain("compare");
-		expect(output).toContain("retry");
-		expect(output).toContain("model");
-		expect(output).toContain("cancel");
+		expect(output).toContain("another pass");
+		expect(output).toContain("switch model");
+		expect(output).toContain("keep original");
+		expect(output).not.toContain("Prompt Review");
+		expect(output).not.toContain("OPTIMIZED");
 	});
 
 	it("cycles through diff and original views without losing keyboard actions", () => {
@@ -58,9 +64,9 @@ describe("prompt review", () => {
 
 		component.handleInput("\t");
 		const diff = rendered(component, 82);
-		expect(diff).toContain("DIFF");
+		expect(diff).toContain("CHANGES");
 		expect(diff).toContain("--- original");
-		expect(diff).toContain("+++ optimized");
+		expect(diff).toContain("+++ chiseled");
 
 		component.handleInput("\t");
 		expect(rendered(component, 82)).toContain("ORIGINAL");

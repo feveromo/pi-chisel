@@ -19,29 +19,30 @@ export async function acceptReplacement(
 	if (current !== capturedDraft) {
 		const choice = await showChoice(
 			ctx,
-			"Draft changed while polishing",
-			"Pi will not overwrite the newer editor contents without your explicit choice.",
+			"Draft changed while Chisel was working",
+			"Your editor has newer text. Chisel won't overwrite it without your say-so.",
 			[
 				{
 					value: "replace",
-					label: "Replace the newer draft",
-					description: "The newer text remains available for immediate undo",
+					label: "Replace newer draft with chiseled version",
+					description: "The newer text stays available for immediate undo",
 					key: "r",
 				},
 				{
 					value: "merge",
 					label: "Open a merge editor",
-					description: "Edit the newer and optimized versions into one prompt",
+					description: "Blend the newer and chiseled versions into one draft",
 					key: "e",
 				},
-				{ value: "cancel", label: "Cancel and keep the newer draft", key: "q" },
+				{ value: "cancel", label: "Keep newer draft", key: "q" },
 			],
 			invocation,
+			"keep newer",
 		);
 		if (choice === "cancel" || choice === undefined) return undefined;
 		if (choice === "merge") {
 			const merged = await ctx.ui.editor(
-				"Merge into one prompt (newer draft first, optimized alternative second)",
+				"Merge drafts (newer first, chiseled second)",
 				`${current}\n\n${optimized}`,
 			);
 			if (merged === undefined) return undefined;
@@ -52,8 +53,8 @@ export async function acceptReplacement(
 	if (replacement === current) {
 		await showNotice(
 			ctx,
-			"No replacement needed",
-			"The reviewed prompt already matches the editor.",
+			"Already in place",
+			"The chiseled draft already matches your editor.",
 			invocation,
 		);
 		return undefined;
@@ -63,12 +64,12 @@ export async function acceptReplacement(
 	ctx.ui.setEditorText(replacement);
 	const undo = await showChoice(
 		ctx,
-		"Prompt replaced",
-		"The optimized prompt is still only a draft. Submit it normally when ready.",
+		"Chiseled draft ready",
+		"Still unsent. Submit normally when it looks right.",
 		[
 			{
 				value: "keep",
-				label: "Continue with optimized draft",
+				label: "Keep this draft",
 				key: "enter",
 			},
 			{ value: "restore", label: "Restore previous draft", key: "u" },
@@ -102,14 +103,15 @@ export async function restoreReplacement(
 					key: "r",
 				},
 				{ value: "merge", label: "Open a merge editor", key: "e" },
-				{ value: "cancel", label: "Cancel", key: "q" },
+				{ value: "cancel", label: "Keep newer input", key: "q" },
 			],
 			invocation,
+			"keep newer input",
 		);
 		if (choice === "cancel" || choice === undefined) return false;
 		if (choice === "merge") {
 			const merged = await ctx.ui.editor(
-				"Merge into one prompt (newer input first, previous draft second)",
+				"Merge drafts (newer first, previous second)",
 				`${current}\n\n${record.before}`,
 			);
 			if (merged === undefined) return false;
@@ -120,8 +122,8 @@ export async function restoreReplacement(
 	ctx.ui.setEditorText(restored);
 	await showNotice(
 		ctx,
-		"Draft restored",
-		"Nothing was submitted to the conversation.",
+		"Previous draft restored",
+		"You're back where you started. Nothing was submitted.",
 		invocation,
 	);
 	return true;
