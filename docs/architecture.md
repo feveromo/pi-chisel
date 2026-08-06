@@ -63,20 +63,20 @@ Pi’s `EditorComponent` contract in `@earendil-works/pi-tui/dist/editor-compone
 - `BorderedLoader` and `CancellableLoader` establish Pi’s native spinner/AbortSignal pattern in `dist/modes/interactive/components/bordered-loader.js:1-53` and `@earendil-works/pi-tui/dist/components/cancellable-loader.d.ts:1-22`.
 - Theme tokens and helpers are documented in `docs/themes.md:95-251`.
 
-Pi Chisel composes only native `Container`, `Text`, `Input`, `SelectList`, `SettingsList`, `CancellableLoader`, `DynamicBorder`, key matching, fuzzy filtering, and theme functions. Every view is transient; there is no widget, footer, status, header, or transcript entry.
+Pi Chisel composes only native `Container`, `Text`, `Input`, `SelectList`, `SettingsList`, `CancellableLoader`, `DynamicBorder`, key matching, fuzzy filtering, and theme functions. Every view is transient; there is no widget, footer, status, header, or transcript entry. The visible journey uses one product voice: **Pi Chisel at Work** while generating, **Fresh off the Chisel** for review, and **Chiseled draft ready** after replacement. Model, grounding, unsent status, and destructive choices stay literal so the personality never obscures behavior.
 
-## Visible conversation context
+## Layered grounding context
 
-`ExtensionContext.sessionManager` is the public read-only session facade at `dist/core/extensions/types.d.ts:209-249`. `ReadonlySessionManager` and `getBranch()` are defined in `dist/core/session-manager.d.ts:1-123, 240-267`.
+`ExtensionContext.sessionManager` is the public read-only session facade at `dist/core/extensions/types.d.ts:209-249`. `ReadonlySessionManager.buildContextEntries()` is defined in `dist/core/session-manager.d.ts`; unlike a raw branch walk, it honors Pi’s current compaction checkpoint and retained context. `ExtensionContext.getSystemPrompt()` exposes the current effective system prompt, and `isProjectTrusted()` preserves Pi’s project trust boundary.
 
-The context builder accepts only active-branch message entries whose role is `user` or `assistant`, then extracts text blocks. This intentionally excludes:
+Grounding has two independently bounded layers:
 
-- assistant thinking blocks
-- tool calls and tool-result messages
-- compaction/custom/label/model-change entries
-- extension metadata and diagnostics
+1. **Workspace evidence.** Every `auto` or `recent` invocation includes at least the current workspace identity. A trusted workspace can also contribute the detected project root and branch, a package/language manifest summary, a short README overview, top-level landmarks, and bounded project guidance extracted from Pi’s `<project_context>`. An untrusted workspace is never inspected beyond its identity.
+2. **Active-session evidence.** The builder retains recent user and assistant text plus compaction and branch summaries. It intentionally excludes thinking blocks, tool calls, tool results, hidden custom entries, extension metadata, telemetry, and model diagnostics.
 
-It walks newest to oldest and formats explicit `[USER]` and `[ASSISTANT]` boundaries. `estimateTokens()` is exported from `dist/index.d.ts:5`; its implementation at `dist/core/compaction/compaction.js:188-226` uses Pi’s conservative characters-per-token estimate. The current draft is budgeted separately and is never shortened.
+`auto` no longer makes a binary “context needed” decision. Brief or explicitly referential drafts receive the expanded remaining session budget; developed drafts receive a smaller ambient slice, which keeps them session-aware without letting unrelated history dominate. `recent` uses the full remaining session budget, while `none` is the explicit draft-only opt-out.
+
+Context items use explicit `[USER]`, `[ASSISTANT]`, `[SESSION_SUMMARY]`, and `[BRANCH_SUMMARY]` boundaries. A per-item cap prevents one long response from evicting the preceding request, and oversized items preserve both their beginning and end around an omission marker. `estimateTokens()` is exported from `dist/index.d.ts:5`; its implementation uses Pi’s conservative characters-per-token estimate. The exact draft, output allowance, request framing, and provider margin are reserved first, so grounding shrinks before the draft ever could.
 
 ## Model registry, provider invocation, and transcript isolation
 
@@ -98,8 +98,8 @@ Pi Chisel uses the strongest public boundary available without modifying core:
 2. Fetch its registered `Provider`.
 3. Resolve model-specific headers/environment with `getApiKeyAndHeaders(model)`.
 4. Resolve credential-specific base URL with `getProviderAuth(provider)` and project it onto a request-local model copy.
-5. Call `provider.streamSimple()` with a fresh side-channel session ID, `cacheRetention: "none"`, `maxRetries: 0`, a bounded output cap, and the overlay AbortSignal.
-6. Consume text deltas and validate the final stop reason and non-empty text.
+5. Call `provider.streamSimple()` with a fresh side-channel session ID, `cacheRetention: "none"`, `maxRetries: 0`, a bounded output cap, the overlay AbortSignal, and temperature `0.2` for non-reasoning models to reduce gratuitous variation.
+6. Consume text deltas and validate the final stop reason, non-empty text, and—at standard or strong intensity—that the model did not return the draft unchanged.
 
 No method on `AgentSession`, `SessionManager`, or `ExtensionAPI` is used to send or append the optimizer request. As a result, neither request nor response enters the active branch, session JSONL, LLM context, transcript renderer, or usage footer.
 
@@ -116,13 +116,14 @@ The model preference is either `null` for “follow current chat model” or `{ 
 ## End-to-end flow
 
 1. The shortcut handler captures `ctx.ui.getEditorText()` exactly once.
-2. It resolves a pinned/current model and computes remaining context capacity after reserving the full draft, instruction, output, and provider safety margin.
-3. The bounded visible reference and exact draft are placed in explicit data boundaries under the compact system instruction.
-4. A native cancellable overlay streams one provider request.
-5. A review overlay offers accept, full-text editing, bounded token diff, scrollable optimized/original views, retry, model selection, or cancel. Its copy explicitly states that acceptance cannot submit.
-6. Acceptance re-reads the editor. An exact match allows replacement; any mismatch forces replace/merge/cancel choice.
-7. A second temporary bubble offers immediate restore. Restore rechecks the editor before writing.
-8. Submission remains the normal Pi editor action and is never synthesized by the extension.
+2. It resolves a pinned/current model and computes remaining grounding capacity after reserving the full draft, instruction, output, reference framing, and provider safety margin.
+3. It builds trusted workspace evidence plus a compaction-aware recent-session window. A fresh session still receives workspace grounding.
+4. Workspace evidence, session evidence, deterministic draft metadata, and the exact draft are placed in separate explicit boundaries under the optimizer instruction.
+5. A native cancellable **Pi Chisel at Work** overlay streams one provider request.
+6. A **Fresh off the Chisel** overlay names the model and grounding used, then offers use, tune, bounded changes, scrollable chiseled/original views, another pass, model selection, or keeping the original. Its copy explicitly states that using the result cannot submit.
+7. Acceptance re-reads the editor. An exact match allows replacement; any mismatch forces replace/merge/cancel choice.
+8. A temporary confirmation overlay offers immediate restore. Restore rechecks the editor before writing.
+9. Submission remains the normal Pi editor action and is never synthesized by the extension.
 
 ## File responsibilities
 
@@ -131,15 +132,18 @@ src/index.ts                    extension factory and Pi registrations
 src/controller.ts               lifecycle and single-invocation ownership
 src/state.ts                    mutable config state with atomic persistence
 src/config.ts                   schema, validation, shortcut checks, file store
-src/context-builder.ts          visible-turn extraction and token budgeting
-src/optimizer-instruction.ts    reusable editing instruction and intensity directive
-src/request-builder.ts          request boundaries, estimates, output sizing
+src/draft-analysis.ts           deterministic brief/referential draft classification
+src/context-builder.ts          compaction-aware session extraction and token budgeting
+src/project-context.ts          trusted bounded workspace evidence
+src/grounding.ts                adaptive workspace/session allocation and UI summary
+src/optimizer-instruction.ts    grounded editing method and intensity directive
+src/request-builder.ts          separated evidence boundaries, estimates, output sizing
 src/model-selection.ts          pin/current/fallback resolution and context capacity
 src/model-client.ts             generic provider stream and response validation
 src/workflow.ts                 generation/review/retry orchestration
 src/replacement.ts              changed-draft conflict and restore safety
 src/overlay.ts                  native overlay adapters
-src/ui/*                        focused prompt-bubble components, bounded diff, viewport logic
+src/ui/*                        focused optimizer/review components, bounded diff, viewport logic
 test/*.test.ts                  pure and provider-boundary tests
 test/smoke-tui.py               real Pi PTY integration smoke test
 test/smoke-configured.sh        active-settings checkout resolution smoke test

@@ -50,14 +50,14 @@ function response(
 
 export default function fauxProvider(pi: ExtensionAPI): void {
 	pi.registerProvider(PROVIDER, {
-		name: "Prompt Optimizer Faux Provider",
+		name: "Pi Chisel Faux Provider",
 		baseUrl: "https://example.invalid",
 		apiKey: "faux-test-key",
 		api: "prompt-optimizer-faux-api",
 		models: [
 			{
 				id: MODEL,
-				name: "Prompt Optimizer Faux Model",
+				name: "Pi Chisel Faux Model",
 				reasoning: false,
 				input: ["text"],
 				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -69,7 +69,7 @@ export default function fauxProvider(pi: ExtensionAPI): void {
 			const stream = createAssistantMessageEventStream();
 			const input = textFromLastUser(context);
 			const optimizing =
-				context.systemPrompt?.includes("You are a prompt editor") ?? false;
+				context.systemPrompt?.includes("Pi Chisel's prompt editor") ?? false;
 			const text = optimizing
 				? "Please make this clearer while preserving the exact intent."
 				: `MAIN RECEIVED: ${input}`;

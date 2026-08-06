@@ -1,5 +1,5 @@
-export { type ChoiceOption, PromptBubbleChoice } from "./choice.ts";
-export { PromptBubbleLoader } from "./loader.ts";
+export { type ChoiceOption, PromptChoiceComponent } from "./choice.ts";
+export { PromptOptimizationLoader } from "./loader.ts";
 export {
 	type ModelPickerResult,
 	OptimizerModelPicker,

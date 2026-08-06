@@ -88,17 +88,13 @@ export class OptimizerModelPicker extends Container implements Focusable {
 		this.addChild(accentBorder(theme));
 		this.addChild(
 			new Text(
-				theme.fg("accent", theme.bold("  ✦ Choose optimizer model")),
+				theme.fg("accent", theme.bold("  ✦ Choose Chisel's model")),
 				0,
 				0,
 			),
 		);
 		this.addChild(
-			new Text(
-				theme.fg("muted", "  This never changes the active chat model."),
-				0,
-				0,
-			),
+			new Text(theme.fg("muted", "  Your active chat model stays put."), 0, 0),
 		);
 		this.addChild(new Spacer(1));
 		this.addChild(this.searchInput);
@@ -109,7 +105,7 @@ export class OptimizerModelPicker extends Container implements Focusable {
 			new Text(
 				theme.fg(
 					"dim",
-					`  Type to search · ${rawKeyHint("enter", "select")} · ${rawKeyHint("escape", "cancel")}`,
+					`  Type to search · ${rawKeyHint("enter", "select")} · ${rawKeyHint("escape", "close")}`,
 				),
 				0,
 				0,

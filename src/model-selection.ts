@@ -39,8 +39,8 @@ export function resolveOptimizerModel(
 				model: ctx.model,
 				source: "fallback",
 				warning: configuredExists
-					? `${preference.provider}/${preference.id} is not currently authenticated or available. Using ${modelReference(ctx.model)} for this run; the pinned choice was kept.`
-					: `${preference.provider}/${preference.id} is no longer in Pi's model registry. Using ${modelReference(ctx.model)} for this run; choose a replacement from the model picker.`,
+					? `${preference.provider}/${preference.id} is not currently authenticated or available. Using ${modelReference(ctx.model)} for this pass; Chisel's pin stays put.`
+					: `${preference.provider}/${preference.id} is no longer in Pi's model registry. Using ${modelReference(ctx.model)} for this pass; pick another model for Chisel.`,
 			};
 		}
 

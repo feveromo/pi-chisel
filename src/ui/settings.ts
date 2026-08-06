@@ -42,9 +42,9 @@ export class OptimizerSettingsComponent extends Container {
 		const items: SettingItem[] = [
 			{
 				id: "contextMode",
-				label: "Conversation context",
+				label: "Grounding context",
 				description:
-					"none, recent bounded turns, or automatic only for referential drafts",
+					"auto adapts workspace + session evidence; recent uses the full bounded session; none sends only the draft",
 				currentValue: config.contextMode,
 				values: ["auto", "recent", "none"],
 			},
@@ -52,22 +52,21 @@ export class OptimizerSettingsComponent extends Container {
 				id: "contextTokenBudget",
 				label: "Context token budget",
 				description:
-					"Maximum reference-context budget; the current draft is never truncated",
+					"Maximum combined workspace and session evidence; the draft is never truncated",
 				currentValue: String(config.contextTokenBudget),
 				values: ["512", "1024", "1800", "2048", "4096", "8192"],
 			},
 			{
 				id: "intensity",
 				label: "Editing intensity",
-				description: "How far the optimizer may restructure the draft",
+				description: "How boldly Chisel may reshape the draft",
 				currentValue: config.intensity,
 				values: ["light", "standard", "strong"],
 			},
 			{
 				id: "previewMode",
 				label: "Review opens on",
-				description:
-					"The review bubble can always toggle between both versions",
+				description: "The review can always toggle between both versions",
 				currentValue: config.previewMode,
 				values: ["optimized", "original"],
 			},
@@ -75,11 +74,7 @@ export class OptimizerSettingsComponent extends Container {
 
 		this.addChild(new Text(theme.fg("borderAccent", "─".repeat(40)), 0, 0));
 		this.addChild(
-			new Text(
-				theme.fg("accent", theme.bold("  ✦ Prompt optimizer settings")),
-				0,
-				0,
-			),
+			new Text(theme.fg("accent", theme.bold("  ✦ Pi Chisel settings")), 0, 0),
 		);
 		this.addChild(
 			new Text(

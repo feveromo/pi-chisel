@@ -9,7 +9,7 @@ import {
 import type { PreviewMode } from "../config.ts";
 import { createPromptDiff, type PromptDiff } from "./diff.ts";
 import { renderPromptDiffRows } from "./diff-render.ts";
-import { bubbleFrame, sanitizeInline, wrapPlainText } from "./frame.ts";
+import { overlayFrame, sanitizeInline, wrapPlainText } from "./frame.ts";
 import { clampViewportOffset, sliceViewport } from "./viewport.ts";
 
 export type ReviewAction = "accept" | "edit" | "retry" | "model" | "cancel";
@@ -144,19 +144,20 @@ export class PromptReviewComponent implements Component {
 	private heading(): string {
 		if (this.view === "diff") {
 			const coarse = this.diff.coarse ? " · coarse comparison" : "";
-			return `${this.theme.fg("accent", this.theme.bold("DIFF"))}${this.theme.fg("dim", " · ")}${this.theme.fg("success", `+${this.diff.addedCharacters}`)}${this.theme.fg("dim", " / ")}${this.theme.fg("error", `-${this.diff.removedCharacters}`)}${this.theme.fg("dim", ` chars${coarse}`)}`;
+			return `${this.theme.fg("accent", this.theme.bold("CHANGES"))}${this.theme.fg("dim", " · ")}${this.theme.fg("success", `+${this.diff.addedCharacters}`)}${this.theme.fg("dim", " / ")}${this.theme.fg("error", `-${this.diff.removedCharacters}`)}${this.theme.fg("dim", ` chars${coarse}`)}`;
 		}
 		const shown =
 			this.view === "optimized"
 				? this.options.optimized
 				: this.options.original;
-		return `${this.theme.fg("accent", this.theme.bold(this.view.toUpperCase()))}${this.theme.fg("dim", ` · ${shown.length.toLocaleString()} chars`)}`;
+		const label = this.view === "optimized" ? "CHISELED" : "ORIGINAL";
+		return `${this.theme.fg("accent", this.theme.bold(label))}${this.theme.fg("dim", ` · ${shown.length.toLocaleString()} chars`)}`;
 	}
 
 	private tabLabel(): string {
 		if (this.view === "optimized") return "compare";
 		if (this.view === "diff") return "show original";
-		return "show optimized";
+		return "show chiseled";
 	}
 
 	private wrappedRow(
@@ -178,14 +179,15 @@ export class PromptReviewComponent implements Component {
 		this.scrollOffset = viewport.offset;
 
 		const body = [
-			` ${this.theme.fg("accent", this.theme.bold("✦ Prompt Bubble"))}`,
+			` ${this.theme.fg("accent", this.theme.bold("✦ Fresh off the Chisel"))}`,
+			...this.wrappedRow(`Model: ${this.options.modelRef}`, "muted", inner),
 			...this.wrappedRow(
-				`${this.options.modelRef} · ${this.options.contextSummary}`,
+				`Grounded in: ${this.options.contextSummary}`,
 				"muted",
 				inner,
 			),
 			...this.wrappedRow(
-				"Draft only · Accept replaces text without submitting",
+				"Still unsent · Enter replaces your draft; nothing gets submitted",
 				"muted",
 				inner,
 			),
@@ -206,8 +208,9 @@ export class PromptReviewComponent implements Component {
 			);
 		}
 
-		const primary = `${rawKeyHint("enter", "accept")}  ${rawKeyHint("e", "open full text")}  ${rawKeyHint("tab", this.tabLabel())}`;
-		const secondary = `${rawKeyHint("r", "retry")}  ${rawKeyHint("m", "model")}  ${rawKeyHint("escape", "cancel")}`;
+		const primary = `${rawKeyHint("enter", "use this")}  ${rawKeyHint("e", "tune it")}  ${rawKeyHint("tab", this.tabLabel())}`;
+		const secondary = `${rawKeyHint("r", "another pass")}  ${rawKeyHint("m", "switch model")}`;
+		const exit = rawKeyHint("esc", "keep original");
 		const primaryRows = wrapTextWithAnsi(
 			this.theme.fg("accent", primary),
 			inner,
@@ -216,9 +219,12 @@ export class PromptReviewComponent implements Component {
 			this.theme.fg("muted", secondary),
 			inner,
 		).map((line) => ` ${line}`);
-		body.push("", ...primaryRows, ...secondaryRows);
+		const exitRows = wrapTextWithAnsi(this.theme.fg("muted", exit), inner).map(
+			(line) => ` ${line}`,
+		);
+		body.push("", ...primaryRows, ...secondaryRows, ...exitRows);
 
-		return bubbleFrame(this.theme, width, body, true);
+		return overlayFrame(this.theme, width, body, true);
 	}
 
 	invalidate(): void {}

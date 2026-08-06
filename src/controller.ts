@@ -26,15 +26,12 @@ export class PromptOptimizerController {
 
 	async optimize(ctx: ExtensionContext, explicitDraft?: string): Promise<void> {
 		if (ctx.mode !== "tui") {
-			ctx.ui.notify(
-				"Prompt optimization requires Pi's interactive TUI.",
-				"error",
-			);
+			ctx.ui.notify("Pi Chisel needs Pi's interactive TUI.", "error");
 			return;
 		}
 		if (this.active) {
 			ctx.ui.notify(
-				"The prompt optimizer is already open; the second invocation was ignored.",
+				"Pi Chisel is already at work; finish or close that pass first.",
 				"warning",
 			);
 			return;
@@ -45,8 +42,8 @@ export class PromptOptimizerController {
 		if (!draft.trim()) {
 			await showNotice(
 				ctx,
-				"Nothing to polish",
-				"Type a draft first, then press the optimizer shortcut.",
+				"Nothing to chisel",
+				"Drop a draft in the editor, then press your Chisel shortcut.",
 			);
 			return;
 		}
@@ -88,7 +85,7 @@ export class PromptOptimizerController {
 			await showNotice(
 				ctx,
 				"Nothing to restore",
-				"No prompt replacement is available in this extension session.",
+				"Chisel has no previous draft to restore in this session.",
 			);
 			return;
 		}
@@ -106,14 +103,14 @@ export class PromptOptimizerController {
 	private canOpenStandaloneUi(ctx: ExtensionContext, feature: string): boolean {
 		if (ctx.mode !== "tui") {
 			ctx.ui.notify(
-				`Prompt optimizer ${feature} requires Pi's interactive TUI.`,
+				`Pi Chisel's ${feature} needs Pi's interactive TUI.`,
 				"error",
 			);
 			return false;
 		}
 		if (this.active) {
 			ctx.ui.notify(
-				`Close the active prompt optimizer before opening ${feature}.`,
+				`Finish or close the active Chisel pass before opening ${feature}.`,
 				"warning",
 			);
 			return false;

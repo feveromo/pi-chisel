@@ -8,7 +8,7 @@ import {
 } from "@earendil-works/pi-tui";
 import { accentBorder, sanitizeInline } from "./frame.ts";
 
-export class PromptBubbleLoader extends Container {
+export class PromptOptimizationLoader extends Container {
 	private readonly loader: CancellableLoader;
 
 	constructor(
@@ -21,23 +21,23 @@ export class PromptBubbleLoader extends Container {
 		super();
 		this.addChild(accentBorder(theme));
 		this.addChild(
-			new Text(theme.fg("accent", theme.bold("  ✦ Prompt Bubble")), 0, 0),
+			new Text(theme.fg("accent", theme.bold("  ✦ Pi Chisel at Work")), 0, 0),
 		);
 		this.addChild(new Spacer(1));
 		this.loader = new CancellableLoader(
 			tui,
 			(text) => theme.fg("accent", text),
 			(text) => theme.fg("text", text),
-			"Polishing your prompt…",
+			"Shaping a sharper prompt…",
 			{ frames: ["·", "○", "◌", "●", "◌", "○"], intervalMs: 90 },
 		);
 		this.addChild(this.loader);
 		this.addChild(
+			new Text(theme.fg("muted", `  Model: ${sanitizeInline(modelRef)}`), 0, 0),
+		);
+		this.addChild(
 			new Text(
-				theme.fg(
-					"muted",
-					`  ${sanitizeInline(modelRef)} · ${sanitizeInline(contextSummary)}`,
-				),
+				theme.fg("muted", `  Grounded in: ${sanitizeInline(contextSummary)}`),
 				0,
 				0,
 			),
@@ -49,7 +49,7 @@ export class PromptBubbleLoader extends Container {
 		this.addChild(new Spacer(1));
 		this.addChild(
 			new Text(
-				theme.fg("dim", `  ${keyHint("tui.select.cancel", "cancel")}`),
+				theme.fg("dim", `  ${keyHint("tui.select.cancel", "keep original")}`),
 				0,
 				0,
 			),
@@ -69,7 +69,7 @@ export class PromptBubbleLoader extends Container {
 	setProgress(characters: number): void {
 		if (characters > 0)
 			this.loader.setMessage(
-				`Polishing your prompt… ${characters.toLocaleString()} chars`,
+				`Shaping a sharper prompt… ${characters.toLocaleString()} chars`,
 			);
 	}
 

@@ -66,7 +66,7 @@ describe("optimizer model selection", () => {
 		);
 		expect(resolved?.model).toBe(chat);
 		expect(resolved?.source).toBe("fallback");
-		expect(resolved?.warning).toContain("pinned choice was kept");
+		expect(resolved?.warning).toContain("Chisel's pin stays put");
 	});
 
 	it("reserves draft and provider headroom before context", () => {

@@ -1,6 +1,5 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { buildConversationReference } from "./context-builder.ts";
+import { buildOptimizationGrounding } from "./grounding.ts";
 import {
 	friendlyOptimizationError,
 	OPTIMIZER_REQUEST_TIMEOUT_MS,
@@ -9,26 +8,20 @@ import {
 	runPromptOptimization,
 } from "./model-client.ts";
 import {
-	calculateContextBudgetForModel,
 	modelReference,
 	type ResolvedOptimizerModel,
 	resolveOptimizerModel,
 } from "./model-selection.ts";
 import {
 	type InvocationHandle,
-	PROMPT_BUBBLE_OVERLAY,
+	PROMPT_OVERLAY,
 	showChoice,
 	showReview,
 } from "./overlay.ts";
 import { acceptReplacement, type ReplacementRecord } from "./replacement.ts";
-import {
-	buildOptimizationRequest,
-	calculateMaxOutputTokens,
-	estimateTextTokens,
-	type OptimizationReference,
-} from "./request-builder.ts";
+import type { OptimizationReference } from "./request-builder.ts";
 import type { OptimizerState } from "./state.ts";
-import { PromptBubbleLoader } from "./ui/index.ts";
+import { PromptOptimizationLoader } from "./ui/index.ts";
 
 interface GenerationSuccess {
 	kind: "success";
@@ -66,7 +59,7 @@ export async function runOptimizationWorkflow(
 	let optimized: string | undefined;
 	let resolved: ResolvedOptimizerModel | undefined;
 	let reference: OptimizationReference | undefined;
-	let contextSummary = "no conversation context";
+	let contextSummary = "context pending";
 
 	while (isActive()) {
 		if (!optimized) {
@@ -74,19 +67,25 @@ export async function runOptimizationWorkflow(
 			if (!resolved) {
 				const action = await showChoice(
 					ctx,
-					"No optimizer model",
-					"Pi has no current or pinned optimizer model available.",
+					"Chisel needs a model",
+					"Choose a current or pinned model before taking a pass.",
 					[
-						{ value: "model", label: "Choose a model", key: "m" },
-						{ value: "cancel", label: "Cancel", key: "q" },
+						{ value: "model", label: "Choose model", key: "m" },
+						{ value: "cancel", label: "Close", key: "q" },
 					],
 					invocation,
+					"close",
 				);
 				if (action === "model" && (await chooseModel())) continue;
 				return undefined;
 			}
 
-			const context = buildReference(ctx, state, capturedDraft, resolved.model);
+			const context = await buildOptimizationGrounding(
+				ctx,
+				state.config,
+				capturedDraft,
+				resolved.model,
+			);
 			reference = context.reference;
 			contextSummary = context.summary;
 			const warning =
@@ -107,14 +106,15 @@ export async function runOptimizationWorkflow(
 			if (outcome.kind === "error") {
 				const action = await showChoice(
 					ctx,
-					"Polish failed",
+					"Chisel hit a snag",
 					outcome.message,
 					[
-						{ value: "retry", label: "Retry", key: "r" },
-						{ value: "model", label: "Change model", key: "m" },
-						{ value: "cancel", label: "Keep original and close", key: "q" },
+						{ value: "retry", label: "Another pass", key: "r" },
+						{ value: "model", label: "Switch model", key: "m" },
+						{ value: "cancel", label: "Keep original", key: "q" },
 					],
 					invocation,
+					"keep original",
 				);
 				if (action === "retry") continue;
 				if (action === "model" && (await chooseModel())) continue;
@@ -143,7 +143,7 @@ export async function runOptimizationWorkflow(
 			continue;
 		}
 		if (action === "edit") {
-			const edited = await ctx.ui.editor("Edit optimized prompt", optimized);
+			const edited = await ctx.ui.editor("Tune the chiseled draft", optimized);
 			if (edited?.trim()) optimized = edited;
 			continue;
 		}
@@ -151,53 +151,6 @@ export async function runOptimizationWorkflow(
 	}
 
 	return undefined;
-}
-
-function buildReference(
-	ctx: ExtensionContext,
-	state: OptimizerState,
-	draft: string,
-	model: Model<Api>,
-): { reference?: OptimizationReference; summary: string } {
-	const draftTokens = estimateTextTokens(draft);
-	const outputTokens = calculateMaxOutputTokens(draft, model.maxTokens);
-	const withoutReference = buildOptimizationRequest(
-		draft,
-		undefined,
-		state.config.intensity,
-	);
-	const framingTokens = Math.max(
-		0,
-		withoutReference.estimatedInputTokens - draftTokens,
-	);
-	const budget = calculateContextBudgetForModel(
-		model,
-		draftTokens,
-		state.config.contextTokenBudget,
-		outputTokens,
-		framingTokens,
-	);
-	const result = buildConversationReference(
-		ctx.sessionManager.getBranch(),
-		draft,
-		state.config.contextMode,
-		budget,
-	);
-
-	if (result.reference) {
-		return {
-			reference: result.reference,
-			summary: `${result.reference.turnCount} recent turn${result.reference.turnCount === 1 ? "" : "s"} · ~${result.reference.estimatedTokens} context tokens`,
-		};
-	}
-	if (result.reason === "not-referential")
-		return { summary: "no context needed" };
-	if (result.reason === "disabled") return { summary: "context disabled" };
-	if (result.reason === "no-visible-turns")
-		return { summary: "no conversation context" };
-	if (result.reason === "budget-exhausted")
-		return { summary: "no context (draft takes priority)" };
-	return { summary: "no conversation context" };
 }
 
 async function generatePrompt(
@@ -228,7 +181,7 @@ async function generatePrompt(
 					finish({ kind: "cancelled" });
 				};
 
-				const loader = new PromptBubbleLoader(
+				const loader = new PromptOptimizationLoader(
 					tui,
 					theme,
 					modelReference(resolved.model),
@@ -288,7 +241,7 @@ async function generatePrompt(
 
 				return loader;
 			},
-			PROMPT_BUBBLE_OVERLAY,
+			PROMPT_OVERLAY,
 		);
 	} finally {
 		requestController.abort();

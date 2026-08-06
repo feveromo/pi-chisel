@@ -124,6 +124,7 @@ describe("prompt optimizer model client", () => {
 			apiKey: "resolved-by-pi",
 			cacheRetention: "none",
 			maxRetries: 0,
+			temperature: 0.2,
 		});
 		expect(test.getContext()?.messages).toHaveLength(1);
 		expect(test.getContext()?.systemPrompt).toContain("prompt editor");
@@ -172,7 +173,7 @@ describe("prompt optimizer model client", () => {
 		expect(test.streamSimple).not.toHaveBeenCalled();
 	});
 
-	it("rejects empty or truncated output instead of replacing the draft", async () => {
+	it("rejects empty, unchanged, or truncated output instead of replacing the draft", async () => {
 		await expect(
 			runPromptOptimization({
 				model: TEST_MODEL,
@@ -186,11 +187,31 @@ describe("prompt optimizer model client", () => {
 		await expect(
 			runPromptOptimization({
 				model: TEST_MODEL,
+				modelRegistry: harness(assistant("draft")).registry,
+				draft: "draft",
+				intensity: "standard",
+				signal: new AbortController().signal,
+			}),
+		).rejects.toThrow("unchanged");
+
+		await expect(
+			runPromptOptimization({
+				model: TEST_MODEL,
 				modelRegistry: harness(assistant("partial", "length")).registry,
 				draft: "draft",
 				intensity: "standard",
 				signal: new AbortController().signal,
 			}),
 		).rejects.toThrow("output limit");
+
+		await expect(
+			runPromptOptimization({
+				model: TEST_MODEL,
+				modelRegistry: harness(assistant("draft")).registry,
+				draft: "draft",
+				intensity: "light",
+				signal: new AbortController().signal,
+			}),
+		).resolves.toBe("draft");
 	});
 });

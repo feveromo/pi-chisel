@@ -44,7 +44,7 @@ export async function chooseOptimizerModel(
 		await showNotice(
 			ctx,
 			"No current chat model",
-			"Choose a pinned model instead.",
+			"Pick a pinned model for Chisel instead.",
 			invocation,
 		);
 		return false;
@@ -75,7 +75,7 @@ export async function runOptimizerSettings(
 		}
 
 		const entered = await ctx.ui.input(
-			"Optimizer shortcut",
+			"Chisel shortcut",
 			"Examples: ctrl+alt+p, f6, alt+p",
 		);
 		if (entered === undefined) continue;
