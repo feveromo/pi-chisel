@@ -76,7 +76,7 @@ export async function runOptimizerSettings(
 
 		const entered = await ctx.ui.input(
 			"Chisel shortcut",
-			"Examples: ctrl+alt+p, f6, alt+p",
+			"Examples: ctrl+shift+k, f6, alt+p",
 		);
 		if (entered === undefined) continue;
 		const shortcut = normalizeShortcut(entered);
@@ -84,7 +84,7 @@ export async function runOptimizerSettings(
 			await showNotice(
 				ctx,
 				"Invalid shortcut",
-				"Use Pi's modifier+key format, for example ctrl+alt+p or f6.",
+				"Use Pi's modifier+key format, for example ctrl+shift+k or f6.",
 			);
 			continue;
 		}

@@ -1,12 +1,6 @@
-# Verified Pi 0.83.0 architecture
+# Verified Pi 0.84.1 architecture
 
-This extension was designed against the exact installation at:
-
-```text
-/home/fever/.local/lib/node_modules/@earendil-works/pi-coding-agent
-```
-
-The package reports version `0.83.0`. References below are relative to that directory unless another package is named.
+Pi Chisel's native Pi integration is designed and tested against `@earendil-works/pi-coding-agent` **0.84.1**. Source references below are relative to that installed package unless another package is named.
 
 ## Extension lifecycle and discovery
 
@@ -30,7 +24,7 @@ Pi Chisel starts no resources in its async factory. It owns one active request c
 1. The shortcut sees the normal editor’s current draft.
 2. It does not run while a selector, editor dialog, or custom overlay owns focus.
 
-Pi’s complete default map is in `docs/keybindings.md:1-198` and `dist/core/keybindings.d.ts`. Ctrl+Alt+P has no binding in Pi, the installed extensions, the effective Ghostty configuration, GNOME, or this installation’s `~/.pi/agent/keybindings.json`; Ghostty reports it unambiguously through Kitty CSI-u. Ctrl+Shift+O is intentionally excluded because Ghostty binds it to `new_split:right`. A physical F6 press in the active Ghostty session was not dispatched even though Pi correctly handles the legacy F6 sequence in a PTY.
+Pi’s complete default map is in `docs/keybindings.md` and `dist/core/keybindings.d.ts`. Ctrl+Shift+K has no binding in Pi or OMP and is unclaimed by the effective Ghostty configurations on macOS and Linux. Ctrl+Alt+P is excluded because macOS intercepts it on this setup; Ctrl+Shift+J is excluded because Linux Ghostty binds it to `write_screen_file`; Ctrl+Shift+O remains reserved by Ghostty.
 
 A configured key is validated locally, checked against the injected `KeybindingsManager.getResolvedBindings()`, then registered normally after reload. The runner remains the final authority for conflicts with other extensions.
 

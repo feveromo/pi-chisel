@@ -20,10 +20,30 @@ from contextlib import suppress
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PI = shutil.which("pi")
+PI = os.environ.get("PI_BIN") or shutil.which("pi")
 if PI is None:
     raise SystemExit("pi is not on PATH")
 
+
+def kitty_shortcut(value: str, *, alternate: bool = False) -> bytes:
+    parts = value.strip().lower().split("+")
+    key = parts.pop() if parts else ""
+    modifier_values = {"shift": 1, "alt": 2, "ctrl": 4, "super": 8}
+    if len(key) != 1 or len(parts) != len(set(parts)) or any(
+        modifier not in modifier_values for modifier in parts
+    ):
+        raise SystemExit(
+            f"Smoke test only supports a modified single-character shortcut, got {value!r}"
+        )
+    modifiers = 1 + sum(modifier_values[modifier] for modifier in parts)
+    codepoint = ord(key)
+    if alternate:
+        alternate_codepoint = ord(key.upper()) if "shift" in parts else codepoint
+        return f"\x1b[{codepoint}::{alternate_codepoint};{modifiers}u".encode()
+    return f"\x1b[{codepoint};{modifiers}u".encode()
+
+
+shortcut = os.environ.get("PI_CHISEL_SMOKE_SHORTCUT", "ctrl+shift+k")
 configured_runtime = os.environ.get("PI_CHISEL_CONFIGURED") == "1"
 config_dir = None if configured_runtime else tempfile.mkdtemp(prefix="pi-chisel-smoke-")
 master_fd, slave_fd = pty.openpty()
@@ -155,7 +175,7 @@ if process.poll() is not None:
 
 # Escape must cancel an active request and preserve the original editor draft.
 send(b"slow original")
-send(b"\x1b[112;7u")  # Ctrl+Alt+P in Kitty CSI-u form
+send(kitty_shortcut(shortcut))
 wait_for("Pi Chisel at Work")
 wait_for("Shaping a sharper prompt")
 send(b"\x1b")
@@ -168,7 +188,7 @@ if "slow original" not in plain_tail():
 # Clear the preserved draft, then exercise review, replacement, and explicit submission.
 send(b"\x03")  # Ctrl+C clears the editor
 send(b"make this clearer")
-send(b"\x1b[112::112;7u")  # Alternate-key form emitted by enhanced terminals
+send(kitty_shortcut(shortcut, alternate=True))
 wait_for("Fresh off the Chisel")
 wait_for("CHISELED")
 wait_for("Please make this clearer")
@@ -202,15 +222,18 @@ wait_for("MAIN RECEIVED: Please make this clearer", timeout=8.0)
 # Exit cleanly with an empty editor after the faux response settles.
 pump(0.3)
 send(b"\x04")
-try:
-    process.wait(timeout=5)
-except subprocess.TimeoutExpired:
+# Keep draining the PTY while Pi shuts down. A configured runtime can render
+# enough final UI output to fill the PTY buffer and otherwise block its own exit.
+deadline = time.monotonic() + 5.0
+while process.poll() is None and time.monotonic() < deadline:
+    pump(0.1)
+if process.poll() is None:
     fail("Pi did not exit cleanly after the smoke test")
 if process.returncode != 0:
     fail(f"Pi exited with status {process.returncode}")
 
 runtime_label = "configured package" if configured_runtime else "isolated extension"
 print(
-    f"Pi TUI smoke test passed ({runtime_label}): Ctrl+Alt+P, Escape cancellation, "
+    f"Pi TUI smoke test passed ({runtime_label}, {shortcut}): Escape cancellation, "
     "chiseled/changes/original review, replacement, and explicit submission."
 )
