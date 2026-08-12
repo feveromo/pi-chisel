@@ -6,7 +6,6 @@ import {
 	type Model,
 	streamSimple,
 } from "@oh-my-pi/pi-ai";
-import { clampThinkingLevelForModel } from "@oh-my-pi/pi-catalog/model-thinking";
 import type { ModelRegistry } from "@oh-my-pi/pi-coding-agent";
 import type { OptimizerIntensity } from "./config.ts";
 import type { OptimizationReference } from "./request-builder.ts";
@@ -59,6 +58,11 @@ function resolveRequestModel(
 	const baseUrl =
 		modelRegistry.getProviderBaseUrl(model.provider) ?? model.baseUrl;
 	return baseUrl ? { ...model, baseUrl } : model;
+}
+
+function lowestReasoningEffort(model: Model<Api>): Effort | undefined {
+	if (!model.reasoning) return undefined;
+	return model.thinking?.efforts[0];
 }
 
 async function consumeOptimizationStream(
@@ -141,10 +145,7 @@ export async function runPromptOptimization(
 		);
 
 	const requestModel = resolveRequestModel(model, modelRegistry);
-	const reasoning = clampThinkingLevelForModel(
-		requestModel,
-		"minimal" as Effort,
-	);
+	const reasoning = lowestReasoningEffort(requestModel);
 	const sessionId = crypto.randomUUID();
 	const headers = modelRegistry.getProviderHeaders(model.provider);
 	if (signal.aborted) throw new PromptOptimizationCancelledError();
