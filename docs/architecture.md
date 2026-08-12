@@ -1,6 +1,8 @@
 # Pi Chisel architecture on OMP 17.2.11
 
-Pi Chisel's OMP integration is designed and tested against OMP `17.2.11`. Source references below are relative to `node_modules/@oh-my-pi/pi-coding-agent` unless another package is named.
+This document covers Pi Chisel's secondary OMP integration. The native Pi implementation and its verified Pi-specific architecture are maintained on the [`pi` branch](https://github.com/feveromo/pi-chisel/tree/pi).
+
+The OMP integration is designed and tested against OMP `17.2.11`. Source references below are relative to `node_modules/@oh-my-pi/pi-coding-agent` unless another package is named.
 
 ## Plugin discovery and lifetime
 

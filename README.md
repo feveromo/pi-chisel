@@ -8,6 +8,8 @@ Pi Chisel turns rough drafts into clear, send-ready prompts without submitting t
 - **Private by design** — drafts and responses aren't persisted or added to the conversation transcript.
 - **Provider-independent** — follows the current chat model or uses a separately pinned optimizer model.
 
+Pi Chisel's native Pi package is the primary integration. A separate OMP integration is supported for users of that host.
+
 ## See it in action
 
 Invoke Pi Chisel while the original draft remains untouched:
@@ -26,41 +28,49 @@ The screenshots use a deterministic faux provider and synthetic content only.
 
 ## Install
 
-Pi Chisel currently ships with a native Oh My Pi integration, verified against OMP **17.2.11** and its canonical `@oh-my-pi/*` APIs. Later versions may work but aren't part of this release's tested compatibility boundary.
+### Pi
 
-Requirements:
+The native Pi package is verified against `@earendil-works/pi-coding-agent` **0.84.1**. Confirm `pi --version` reports `0.84.1` and configure a model through `/login` or `/model`.
 
-- `omp --version` reports `omp/17.2.11`.
-- A model is configured through `/login` or `/model`.
+Install the pinned release from GitHub:
 
-Install from GitHub:
+```bash
+pi install git:github.com/feveromo/pi-chisel@pi-v0.1.0
+```
+
+Run `/reload` in an open Pi session, or start a new one, then verify the package:
+
+```bash
+pi list
+```
+
+Try Pi Chisel for one session without installing it:
+
+```bash
+pi -e git:github.com/feveromo/pi-chisel@pi-v0.1.0
+```
+
+### OMP integration
+
+The secondary OMP integration is verified against OMP **17.2.11** and its canonical `@oh-my-pi/*` APIs. Later OMP versions may work but aren't part of this release's tested compatibility boundary. Configure a model through `/login` or `/model`, then install:
 
 ```bash
 omp plugin install github:feveromo/pi-chisel
 ```
 
-Run `/reload` in an open session, or start a new one, then verify the installation:
+Run `/reload` in an open OMP session, or start a new one, then verify the plugin:
 
 ```bash
 omp plugin list
 ```
 
-To work from a checkout instead:
-
-```bash
-git clone https://github.com/feveromo/pi-chisel.git
-cd pi-chisel
-npm ci --ignore-scripts
-omp plugin link .
-```
-
-Run directly without installing:
+From a main-branch checkout, run the OMP integration directly without installing it:
 
 ```bash
 omp --no-extensions -e ./src/index.ts
 ```
 
-Uninstall with:
+Uninstall it with:
 
 ```bash
 omp plugin uninstall pi-chisel
@@ -92,15 +102,19 @@ Commands:
 
 Pi Chisel follows the current chat model by default. Pinning another model affects only the optimizer; it doesn't change the conversation model. If the pinned model becomes unavailable, Pi Chisel reports the fallback and uses the current model for that pass.
 
-The OMP integration uses the host's authenticated model registry, credential resolver, provider headers, and credential-specific base URL. OAuth-backed models therefore follow the same authentication path as the active session.
+The Pi integration uses Pi's registered provider and resolved authentication, including OAuth credentials, provider headers, provider-scoped environment, and credential-specific base URLs. Its settings are stored at:
 
-Run `/prompt-optimize-settings` to configure Pi Chisel. Settings are written atomically with mode `0600` to:
+```text
+~/.pi/agent/prompt-optimizer.json
+```
+
+The OMP integration uses OMP's authenticated model registry, credential resolver, provider headers, and credential-specific base URL. Its settings are stored separately at:
 
 ```text
 ~/.omp/agent/prompt-optimizer.json
 ```
 
-The file contains model IDs and UI preferences, never credentials or drafts.
+Run `/prompt-optimize-settings` to configure either integration. Settings are written atomically with mode `0600` and contain model IDs and UI preferences, never credentials or drafts.
 
 Default configuration:
 
@@ -122,11 +136,11 @@ Default configuration:
 - `recent` — uses the workspace snapshot plus as much recent-session context as fits the configured budget.
 - `none` — sends only the draft and optimizer instruction.
 
-Workspace context can include the project name, relative working directory, branch, manifest summary, README overview, top-level landmarks, and in-project guidance already loaded by the host. Absolute paths aren't added, guidance outside the project root is excluded, and metadata-file symlinks aren't followed.
+Workspace context can include the project name, relative working directory, branch, manifest summary, README overview, top-level landmarks, and in-project guidance already loaded by the host. The Pi integration honors Pi's project-trust boundary and doesn't inspect untrusted project files. The OMP integration doesn't add absolute paths, excludes guidance outside the project root, and doesn't follow metadata-file symlinks.
 
 Session context includes recent user and assistant text plus compaction and branch summaries. It excludes thinking, tool calls and results, hidden entries, extension metadata, telemetry, and diagnostics. The exact draft and output allowance always take priority when context must shrink.
 
-OMP 17.2.11 doesn't expose the former Pi project-trust predicate to extensions. Use `none` when Pi Chisel must not inspect or send workspace or session context.
+OMP 17.2.11 doesn't expose Pi's project-trust predicate to extensions. Use `none` in OMP when Pi Chisel must not inspect or send workspace or session context.
 
 ### Intensity
 
@@ -152,21 +166,35 @@ Additional safeguards:
 - Replacement and restore both verify that the editor still contains the expected text before writing.
 - Shutdown and reload abort active work and dismiss temporary UI.
 
-The current OMP API exposes the whole editor buffer but no selection or cursor-range operation, so this integration optimizes the complete draft. The default **Ctrl+Shift+K** binding is unclaimed by OMP 17.2.11, but a terminal or desktop environment may intercept it; change it through `/prompt-optimize-settings` if needed.
+Pi 0.84.1 and OMP 17.2.11 expose the whole editor buffer but no selection or cursor-range operation, so both integrations optimize the complete draft. The default **Ctrl+Shift+K** binding is unclaimed by both verified host versions, but a terminal or desktop environment may intercept it; change it through `/prompt-optimize-settings` if needed.
 
 ## Develop and test
 
+The integrations have separate runtime branches because they compile against different host APIs.
+
+### Pi checkout
+
 ```bash
-npm ci --ignore-scripts
+git clone --branch pi https://github.com/feveromo/pi-chisel.git pi-chisel-pi
+cd pi-chisel-pi
+npm ci --ignore-scripts --legacy-peer-deps
+pi install .
 npm run validate
 ```
 
-`npm run validate` runs formatting and lint checks, TypeScript, unit tests, a production dependency audit, package inspection, an OMP 17.2.11 PTY smoke test, and a clean packaged-install smoke test.
+The Pi validation suite runs formatting and lint checks, TypeScript, unit tests, an isolated Pi PTY smoke test, and `npm run smoke:configured` against the linked checkout.
 
-After linking the checkout, verify the active host configuration too:
+### OMP checkout
 
 ```bash
+git clone https://github.com/feveromo/pi-chisel.git
+cd pi-chisel
+npm ci --ignore-scripts
+omp plugin link .
+npm run validate
 npm run smoke:configured
 ```
 
-Implementation details and verified integration hooks are documented in [`docs/architecture.md`](docs/architecture.md). Report vulnerabilities through [`SECURITY.md`](SECURITY.md). Pi Chisel is available under the [MIT License](LICENSE).
+The OMP validation suite also runs a production dependency audit, package inspection, an OMP 17.2.11 PTY smoke test, and a clean packaged-install smoke test.
+
+Implementation details and verified host-specific hooks are documented in [`docs/architecture.md`](docs/architecture.md) on each runtime branch. Report vulnerabilities through [`SECURITY.md`](SECURITY.md). Pi Chisel is available under the [MIT License](LICENSE).

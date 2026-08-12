@@ -2,7 +2,7 @@
 	"name": "pi-chisel",
 	"version": "0.1.0",
 	"private": true,
-	"description": "Pi Chisel polishes unsent drafts with native Oh My Pi integration.",
+	"description": "Pi Chisel turns rough drafts into clear, reviewable prompts before submission.",
 	"license": "MIT",
 	"author": "feveromo",
 	"homepage": "https://github.com/feveromo/pi-chisel#readme",
