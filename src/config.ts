@@ -30,7 +30,7 @@ export const DEFAULT_OPTIMIZER_CONFIG: Readonly<OptimizerConfig> =
 		contextMode: "auto",
 		contextTokenBudget: 1800,
 		intensity: "standard",
-		shortcut: "ctrl+alt+p",
+		shortcut: "ctrl+shift+k",
 		previewMode: "optimized",
 	});
 

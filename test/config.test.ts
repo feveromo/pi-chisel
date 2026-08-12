@@ -30,7 +30,7 @@ describe("optimizer config", () => {
 			contextMode: "recent",
 			contextTokenBudget: 4096,
 			intensity: "strong",
-			shortcut: "CTRL+ALT+P",
+			shortcut: "CTRL+SHIFT+K",
 			previewMode: "original",
 		});
 
@@ -40,7 +40,7 @@ describe("optimizer config", () => {
 			contextMode: "recent",
 			contextTokenBudget: 4096,
 			intensity: "strong",
-			shortcut: "ctrl+alt+p",
+			shortcut: "ctrl+shift+k",
 			previewMode: "original",
 		});
 
@@ -51,7 +51,7 @@ describe("optimizer config", () => {
 		expect(invalid.config.contextTokenBudget).toBe(
 			DEFAULT_OPTIMIZER_CONFIG.contextTokenBudget,
 		);
-		expect(invalid.config.shortcut).toBe("ctrl+alt+p");
+		expect(invalid.config.shortcut).toBe("ctrl+shift+k");
 		expect(invalid.warning).toContain("contextTokenBudget");
 		expect(invalid.warning).toContain("shortcut");
 	});
