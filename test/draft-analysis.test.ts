@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { analyzeDraft } from "../src/draft-analysis.ts";
 
 describe("draft analysis", () => {

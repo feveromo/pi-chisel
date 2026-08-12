@@ -1,4 +1,4 @@
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 import { isSafeToRestore } from "./editor-safety.ts";
 import { type InvocationHandle, showChoice, showNotice } from "./overlay.ts";
 

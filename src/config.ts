@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import type { KeyId } from "@earendil-works/pi-tui";
+import { getAgentDir } from "@oh-my-pi/pi-coding-agent";
+import type { KeyId } from "@oh-my-pi/pi-tui";
 
 export type ContextMode = "none" | "recent" | "auto";
 export type OptimizerIntensity = "light" | "standard" | "strong";
@@ -30,7 +30,7 @@ export const DEFAULT_OPTIMIZER_CONFIG: Readonly<OptimizerConfig> =
 		contextMode: "auto",
 		contextTokenBudget: 1800,
 		intensity: "standard",
-		shortcut: "ctrl+alt+p",
+		shortcut: "ctrl+shift+k",
 		previewMode: "optimized",
 	});
 

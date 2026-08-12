@@ -1,5 +1,5 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { Api, Model } from "@oh-my-pi/pi-ai";
+import type { ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 import type { OptimizerConfig } from "./config.ts";
 import {
 	buildConversationReference,
@@ -22,7 +22,7 @@ export interface OptimizationGrounding {
 
 type GroundingExtensionContext = Pick<
 	ExtensionContext,
-	"cwd" | "getSystemPrompt" | "isProjectTrusted" | "sessionManager"
+	"cwd" | "getSystemPrompt" | "sessionManager"
 >;
 
 const REFERENCE_WRAPPER_RESERVE_TOKENS = 160;
@@ -95,7 +95,7 @@ export async function buildOptimizationGrounding(
 	if (totalBudget <= 0)
 		return { summary: "draft only · context window is full" };
 
-	const entries = ctx.sessionManager.buildContextEntries();
+	const entries = ctx.sessionManager.getBranch();
 	const hasSessionEvidence = extractVisibleContextItems(entries).length > 0;
 	const workspaceLimit = hasSessionEvidence
 		? Math.min(
@@ -111,17 +111,15 @@ export async function buildOptimizationGrounding(
 		: Math.min(totalBudget, MAX_WORKSPACE_TOKENS_FRESH_SESSION);
 
 	let systemPrompt = "";
-	let trusted = false;
 	try {
-		systemPrompt = ctx.getSystemPrompt();
-		trusted = ctx.isProjectTrusted();
+		systemPrompt = ctx.getSystemPrompt().join("\n\n");
 	} catch {
-		// A workspace identity reference still works if runtime context is unavailable.
+		// Workspace extraction still works if the runtime prompt is unavailable.
 	}
 	const workspace = await buildWorkspaceReference({
 		cwd: ctx.cwd,
 		systemPrompt,
-		trusted,
+		trusted: true,
 		tokenBudget: workspaceLimit,
 	});
 	const remainingBudget = Math.max(

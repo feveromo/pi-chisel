@@ -1,7 +1,7 @@
 import type {
 	ExtensionCommandContext,
 	ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
+} from "@oh-my-pi/pi-coding-agent";
 import type { OptimizerConfig, OptimizerConfigStore } from "./config.ts";
 import { type InvocationHandle, showNotice } from "./overlay.ts";
 import { type ReplacementRecord, restoreReplacement } from "./replacement.ts";
@@ -25,8 +25,8 @@ export class PromptOptimizerController {
 	}
 
 	async optimize(ctx: ExtensionContext, explicitDraft?: string): Promise<void> {
-		if (ctx.mode !== "tui") {
-			ctx.ui.notify("Pi Chisel needs Pi's interactive TUI.", "error");
+		if (!ctx.hasUI) {
+			ctx.ui.notify("Pi Chisel needs OMP's interactive TUI.", "error");
 			return;
 		}
 		if (this.active) {
@@ -101,9 +101,9 @@ export class PromptOptimizerController {
 	}
 
 	private canOpenStandaloneUi(ctx: ExtensionContext, feature: string): boolean {
-		if (ctx.mode !== "tui") {
+		if (!ctx.hasUI) {
 			ctx.ui.notify(
-				`Pi Chisel's ${feature} needs Pi's interactive TUI.`,
+				`Pi Chisel's ${feature} needs OMP's interactive TUI.`,
 				"error",
 			);
 			return false;

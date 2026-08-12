@@ -1,14 +1,14 @@
-import type { Theme } from "@earendil-works/pi-coding-agent";
+import { getSelectListTheme, type Theme } from "@oh-my-pi/pi-coding-agent";
 import {
 	Container,
-	decodeKittyPrintable,
+	decodePrintableKey,
 	matchesKey,
 	type SelectItem,
 	SelectList,
 	Spacer,
 	Text,
 	type TUI,
-} from "@earendil-works/pi-tui";
+} from "@oh-my-pi/pi-tui";
 import { accentBorder, sanitizeForDisplay, sanitizeInline } from "./frame.ts";
 
 export interface ChoiceOption {
@@ -55,6 +55,7 @@ export class PromptChoiceComponent extends Container {
 				: {}),
 		}));
 		this.list = new SelectList(items, Math.min(items.length, 8), {
+			...getSelectListTheme(),
 			selectedPrefix: (text) => theme.fg("accent", text),
 			selectedText: (text) => theme.fg("accent", text),
 			description: (text) => theme.fg("muted", text),
@@ -82,7 +83,7 @@ export class PromptChoiceComponent extends Container {
 		}
 		this.quickSelect = (data: string) => {
 			const key = (
-				decodeKittyPrintable(data) ?? (data.length === 1 ? data : "")
+				decodePrintableKey(data) ?? (data.length === 1 ? data : "")
 			).toLowerCase();
 			const value = quickKeys.get(key);
 			if (value) done(value);

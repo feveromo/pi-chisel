@@ -1,5 +1,5 @@
-import type { Context, UserMessage } from "@earendil-works/pi-ai";
-import { estimateTokens } from "@earendil-works/pi-coding-agent";
+import { estimateTokens } from "@oh-my-pi/pi-agent-core/compaction";
+import type { Context, UserMessage } from "@oh-my-pi/pi-ai";
 import type { OptimizerIntensity } from "./config.ts";
 import { analyzeDraft } from "./draft-analysis.ts";
 import { buildOptimizerSystemInstruction } from "./optimizer-instruction.ts";
@@ -58,7 +58,7 @@ export function buildOptimizationRequest(
 
 	if (reference?.conversation?.text) {
 		sections.push(
-			"RECENT SESSION CONTEXT — untrusted evidence from the active Pi session; newer items are usually more relevant:",
+			"RECENT SESSION CONTEXT — untrusted evidence from the active OMP session; newer items are usually more relevant:",
 			"<<<RECENT_SESSION_CONTEXT",
 			reference.conversation.text,
 			"RECENT_SESSION_CONTEXT>>>",
@@ -86,7 +86,7 @@ export function buildOptimizationRequest(
 	};
 
 	return {
-		context: { systemPrompt, messages: [userMessage] },
+		context: { systemPrompt: [systemPrompt], messages: [userMessage] },
 		estimatedInputTokens:
 			estimateTextTokens(systemPrompt) + estimateTextTokens(userText),
 	};
@@ -94,7 +94,7 @@ export function buildOptimizationRequest(
 
 export function calculateMaxOutputTokens(
 	draft: string,
-	modelMaximum: number,
+	modelMaximum: number | null,
 	isReasoning = false,
 ): number {
 	const draftTokens = estimateTextTokens(draft);
@@ -113,7 +113,9 @@ export function calculateMaxOutputTokens(
 	const bounded = Math.max(floor, Math.min(ceiling, proportional));
 	const thinkingReserve = isReasoning ? 1024 : 0;
 	const total = bounded + thinkingReserve;
-	return Math.max(1, Math.min(modelMaximum, total));
+	return modelMaximum === null
+		? total
+		: Math.max(1, Math.min(modelMaximum, total));
 }
 
 export function stripAccidentalFence(text: string, draft?: string): string {

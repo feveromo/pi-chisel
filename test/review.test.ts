@@ -1,10 +1,6 @@
-import type { Theme } from "@earendil-works/pi-coding-agent";
-import type { TUI } from "@earendil-works/pi-tui";
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("@earendil-works/pi-coding-agent", () => ({
-	rawKeyHint: (key: string, label: string) => `${key} ${label}`,
-}));
+import { describe, expect, it, mock } from "bun:test";
+import type { Theme } from "@oh-my-pi/pi-coding-agent";
+import type { TUI } from "@oh-my-pi/pi-tui";
 
 import { PromptReviewComponent } from "../src/ui/review.ts";
 
@@ -14,8 +10,8 @@ const theme = {
 } as unknown as Theme;
 
 function createReview(original: string, optimized: string) {
-	const requestRender = vi.fn();
-	const onAction = vi.fn();
+	const requestRender = mock();
+	const onAction = mock();
 	const component = new PromptReviewComponent(
 		{ requestRender } as unknown as TUI,
 		theme,

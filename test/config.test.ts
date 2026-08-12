@@ -1,7 +1,7 @@
+import { afterEach, describe, expect, it } from "bun:test";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
 import {
 	DEFAULT_OPTIMIZER_CONFIG,
 	findShortcutConflicts,
@@ -30,7 +30,7 @@ describe("optimizer config", () => {
 			contextMode: "recent",
 			contextTokenBudget: 4096,
 			intensity: "strong",
-			shortcut: "CTRL+ALT+P",
+			shortcut: "CTRL+SHIFT+K",
 			previewMode: "original",
 		});
 
@@ -40,7 +40,7 @@ describe("optimizer config", () => {
 			contextMode: "recent",
 			contextTokenBudget: 4096,
 			intensity: "strong",
-			shortcut: "ctrl+alt+p",
+			shortcut: "ctrl+shift+k",
 			previewMode: "original",
 		});
 
@@ -51,12 +51,12 @@ describe("optimizer config", () => {
 		expect(invalid.config.contextTokenBudget).toBe(
 			DEFAULT_OPTIMIZER_CONFIG.contextTokenBudget,
 		);
-		expect(invalid.config.shortcut).toBe("ctrl+alt+p");
+		expect(invalid.config.shortcut).toBe("ctrl+shift+k");
 		expect(invalid.warning).toContain("contextTokenBudget");
 		expect(invalid.warning).toContain("shortcut");
 	});
 
-	it("normalizes Pi key names and modifier order for conflict checks", () => {
+	it("normalizes OMP key names and modifier order for conflict checks", () => {
 		expect(normalizeShortcut(" shift + ctrl + p ")).toBe("shift+ctrl+p");
 		expect(normalizeShortcut("PageUp")).toBe("pageUp");
 		expect(normalizeShortcut("super + o")).toBe("super+o");

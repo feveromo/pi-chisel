@@ -1,5 +1,5 @@
-import type { SessionEntry } from "@earendil-works/pi-coding-agent";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
+import type { SessionEntry } from "@oh-my-pi/pi-coding-agent";
 import {
 	buildConversationReference,
 	extractVisibleContextItems,

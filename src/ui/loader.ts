@@ -1,11 +1,11 @@
-import { keyHint, type Theme } from "@earendil-works/pi-coding-agent";
+import type { Theme } from "@oh-my-pi/pi-coding-agent";
 import {
 	CancellableLoader,
 	Container,
 	Spacer,
 	Text,
 	type TUI,
-} from "@earendil-works/pi-tui";
+} from "@oh-my-pi/pi-tui";
 import { accentBorder, sanitizeInline } from "./frame.ts";
 
 export class PromptOptimizationLoader extends Container {
@@ -29,7 +29,7 @@ export class PromptOptimizationLoader extends Container {
 			(text) => theme.fg("accent", text),
 			(text) => theme.fg("text", text),
 			"Shaping a sharper prompt…",
-			{ frames: ["·", "○", "◌", "●", "◌", "○"], intervalMs: 90 },
+			["·", "○", "◌", "●", "◌", "○"],
 		);
 		this.addChild(this.loader);
 		this.addChild(
@@ -47,13 +47,7 @@ export class PromptOptimizationLoader extends Container {
 				new Text(theme.fg("warning", `  ${sanitizeInline(warning)}`), 0, 0),
 			);
 		this.addChild(new Spacer(1));
-		this.addChild(
-			new Text(
-				theme.fg("dim", `  ${keyHint("tui.select.cancel", "keep original")}`),
-				0,
-				0,
-			),
-		);
+		this.addChild(new Text(theme.fg("dim", "  esc keep original"), 0, 0));
 		this.addChild(accentBorder(theme));
 	}
 

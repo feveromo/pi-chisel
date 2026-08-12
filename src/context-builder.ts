@@ -1,4 +1,4 @@
-import type { SessionEntry } from "@earendil-works/pi-coding-agent";
+import type { SessionEntry } from "@oh-my-pi/pi-coding-agent";
 import type { ContextMode } from "./config.ts";
 import {
 	type ConversationReference,
