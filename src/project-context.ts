@@ -1,5 +1,12 @@
 import { lstat, open, readdir } from "node:fs/promises";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import {
+	basename,
+	dirname,
+	isAbsolute,
+	join,
+	relative,
+	resolve,
+} from "node:path";
 import {
 	estimateTextTokens,
 	type WorkspaceReference,
@@ -129,21 +136,30 @@ export function extractProjectGuidance(
 	return guidance;
 }
 
+function pathInsideRoot(root: string, candidate: string): string | undefined {
+	const shownPath = relative(resolve(root), resolve(candidate));
+	if (
+		shownPath === ".." ||
+		shownPath.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) ||
+		isAbsolute(shownPath)
+	) {
+		return undefined;
+	}
+	return shownPath || basename(candidate);
+}
+
 function guidanceText(
 	guidance: readonly ProjectGuidance[],
 	root: string,
 ): string | undefined {
-	if (guidance.length === 0) return undefined;
-	const ranked = [...guidance].sort((left, right) => {
-		const leftInside = relative(root, left.path).startsWith("..") ? 1 : 0;
-		const rightInside = relative(root, right.path).startsWith("..") ? 1 : 0;
-		return leftInside - rightInside || right.path.length - left.path.length;
+	const localGuidance = guidance.flatMap((item) => {
+		const shownPath = pathInsideRoot(root, item.path);
+		return shownPath ? [{ ...item, shownPath }] : [];
 	});
-	return ranked
-		.map((item) => {
-			const shownPath = relative(root, item.path) || basename(item.path);
-			return `[${shownPath}]\n${item.content}`;
-		})
+	if (localGuidance.length === 0) return undefined;
+	return localGuidance
+		.toSorted((left, right) => right.path.length - left.path.length)
+		.map((item) => `[${item.shownPath}]\n${item.content}`)
 		.join("\n\n");
 }
 
@@ -193,7 +209,7 @@ async function packageSummary(root: string): Promise<string | undefined> {
 					name,
 				),
 			)
-			.sort();
+			.sort((left, right) => left.localeCompare(right));
 		if (distinctive.length > 0)
 			lines.push(`Key packages: ${distinctive.slice(0, 18).join(", ")}`);
 		return lines.length > 0 ? lines.join("\n") : undefined;
@@ -293,12 +309,13 @@ export async function buildWorkspaceReference(
 	const { cwd, systemPrompt, trusted, tokenBudget } = options;
 	if (tokenBudget <= 0) return undefined;
 
-	const root = trusted ? await findProjectRoot(cwd) : resolve(cwd);
+	const resolvedCwd = resolve(cwd);
+	const root = trusted ? await findProjectRoot(resolvedCwd) : resolvedCwd;
 	const branch = trusted ? await readGitBranch(root) : undefined;
+	const shownCwd = pathInsideRoot(root, resolvedCwd) ?? basename(resolvedCwd);
 	const identityLines = [
-		`Working directory: ${resolve(cwd)}`,
-		...(root !== resolve(cwd) ? [`Project root: ${root}`] : []),
-		`Project: ${basename(root) || root}`,
+		`Working directory: ${shownCwd || "."}`,
+		`Project: ${basename(root) || "workspace"}`,
 		...(branch ? [`Git branch: ${branch}`] : []),
 		...(!trusted
 			? ["Project trust is inactive; project files were not inspected."]

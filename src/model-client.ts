@@ -2,10 +2,11 @@ import {
 	type Api,
 	type AssistantMessage,
 	type AssistantMessageEventStream,
+	type Effort,
 	type Model,
-	uuidv7,
-} from "@earendil-works/pi-ai";
-import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
+	streamSimple,
+} from "@oh-my-pi/pi-ai";
+import type { ModelRegistry } from "@oh-my-pi/pi-coding-agent";
 import type { OptimizerIntensity } from "./config.ts";
 import type { OptimizationReference } from "./request-builder.ts";
 import {
@@ -39,7 +40,6 @@ export interface RunPromptOptimizationOptions {
 	reference?: OptimizationReference;
 	intensity: OptimizerIntensity;
 	signal: AbortSignal;
-	timeoutMs?: number;
 	onTextDelta?: (totalCharacters: number) => void;
 }
 
@@ -51,20 +51,18 @@ function responseText(response: AssistantMessage): string {
 	return text;
 }
 
-async function resolveRequestModel(
+function resolveRequestModel(
 	model: Model<Api>,
 	modelRegistry: ModelRegistry,
-): Promise<Model<Api>> {
-	try {
-		const providerAuth = await modelRegistry.getProviderAuth(model.provider);
-		return providerAuth?.auth.baseUrl
-			? { ...model, baseUrl: providerAuth.auth.baseUrl }
-			: model;
-	} catch (error) {
-		throw new PromptOptimizationError(
-			error instanceof Error ? error.message : String(error),
-		);
-	}
+): Model<Api> {
+	const baseUrl =
+		modelRegistry.getProviderBaseUrl(model.provider) ?? model.baseUrl;
+	return baseUrl ? { ...model, baseUrl } : model;
+}
+
+function lowestReasoningEffort(model: Model<Api>): Effort | undefined {
+	if (!model.reasoning) return undefined;
+	return model.thinking?.efforts[0];
 }
 
 async function consumeOptimizationStream(
@@ -141,15 +139,15 @@ export async function runPromptOptimization(
 		signal,
 		onTextDelta,
 	} = options;
-	const provider = modelRegistry.getProvider(model.provider);
-	if (!provider)
+	if (!modelRegistry.hasProvider(model.provider))
 		throw new PromptOptimizationError(
-			`Pi no longer has provider “${model.provider}”.`,
+			`OMP no longer has provider “${model.provider}”.`,
 		);
 
-	const auth = await modelRegistry.getApiKeyAndHeaders(model);
-	if (!auth.ok) throw new PromptOptimizationError(auth.error);
-	const requestModel = await resolveRequestModel(model, modelRegistry);
+	const requestModel = resolveRequestModel(model, modelRegistry);
+	const reasoning = lowestReasoningEffort(requestModel);
+	const sessionId = crypto.randomUUID();
+	const headers = modelRegistry.getProviderHeaders(model.provider);
 	if (signal.aborted) throw new PromptOptimizationCancelledError();
 
 	const request = buildOptimizationRequest(draft, reference, intensity);
@@ -158,7 +156,10 @@ export async function runPromptOptimization(
 		model.maxTokens,
 		Boolean(model.reasoning),
 	);
-	if (request.estimatedInputTokens + maxTokens + 4096 > model.contextWindow) {
+	if (
+		model.contextWindow !== null &&
+		request.estimatedInputTokens + maxTokens + 4096 > model.contextWindow
+	) {
 		throw new PromptOptimizationError(
 			`The draft is too long for ${model.provider}/${model.id} without truncating it. Choose a model with a larger context window.`,
 		);
@@ -166,18 +167,16 @@ export async function runPromptOptimization(
 
 	let stream: AssistantMessageEventStream;
 	try {
-		stream = provider.streamSimple(requestModel, request.context, {
+		stream = streamSimple(requestModel, request.context, {
 			...(!model.reasoning ? { temperature: 0.2 } : {}),
-			...(model.reasoning ? { reasoning: "minimal" as const } : {}),
-			...(auth.apiKey ? { apiKey: auth.apiKey } : {}),
-			...(auth.headers ? { headers: auth.headers } : {}),
-			...(auth.env ? { env: auth.env } : {}),
+			...(reasoning ? { reasoning } : {}),
+			apiKey: modelRegistry.resolver(requestModel, sessionId),
+			...(headers ? { headers } : {}),
 			signal,
 			maxTokens,
 			cacheRetention: "none",
-			sessionId: uuidv7(),
-			timeoutMs: options.timeoutMs ?? OPTIMIZER_REQUEST_TIMEOUT_MS,
-			maxRetries: 0,
+			sessionId,
+			codexSseMaxAttempts: 1,
 		});
 	} catch (error) {
 		throw new PromptOptimizationError(
@@ -198,7 +197,7 @@ export function friendlyOptimizationError(error: unknown): string {
 	if (/429|rate.?limit/i.test(message))
 		return "Chisel's model is rate-limited. Your original draft is still untouched.";
 	if (/401|403|unauth|api key|credential|login/i.test(message)) {
-		return `Pi could not authenticate Chisel's model: ${message}`;
+		return `OMP could not authenticate Chisel's model: ${message}`;
 	}
 	if (/network|fetch|socket|econn|enotfound|timed?\s*out/i.test(message)) {
 		return `Chisel could not reach the provider: ${message}`;

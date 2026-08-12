@@ -10,7 +10,7 @@
 		"allowImportingTsExtensions": true,
 		"noEmit": true,
 		"skipLibCheck": true,
-		"types": ["node", "vitest/globals"]
+		"types": ["bun", "node"]
 	},
 	"include": ["src/**/*.ts", "test/**/*.ts"]
 }
