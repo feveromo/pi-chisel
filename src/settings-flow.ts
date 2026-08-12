@@ -1,7 +1,7 @@
 import type {
 	ExtensionCommandContext,
 	ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
+} from "@oh-my-pi/pi-coding-agent";
 import {
 	findShortcutConflicts,
 	normalizeShortcut,
@@ -76,7 +76,7 @@ export async function runOptimizerSettings(
 
 		const entered = await ctx.ui.input(
 			"Chisel shortcut",
-			"Examples: ctrl+alt+p, f6, alt+p",
+			"Examples: ctrl+shift+k, f6, alt+p",
 		);
 		if (entered === undefined) continue;
 		const shortcut = normalizeShortcut(entered);
@@ -84,7 +84,7 @@ export async function runOptimizerSettings(
 			await showNotice(
 				ctx,
 				"Invalid shortcut",
-				"Use Pi's modifier+key format, for example ctrl+alt+p or f6.",
+				"Use OMP's modifier+key format, for example ctrl+shift+k or f6.",
 			);
 			continue;
 		}
@@ -110,7 +110,7 @@ export async function runOptimizerSettings(
 		await showNotice(
 			ctx,
 			"Shortcut saved",
-			`Pi will reload now so ${shortcut} becomes active.`,
+			`OMP will reload now so ${shortcut} becomes active.`,
 		);
 		await ctx.reload();
 		return;

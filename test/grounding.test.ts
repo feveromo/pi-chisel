@@ -1,12 +1,9 @@
+import { afterEach, describe, expect, it } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Api, Model } from "@earendil-works/pi-ai";
-import type {
-	ExtensionContext,
-	SessionEntry,
-} from "@earendil-works/pi-coding-agent";
-import { afterEach, describe, expect, it } from "vitest";
+import type { Api, Model } from "@oh-my-pi/pi-ai";
+import type { ExtensionContext, SessionEntry } from "@oh-my-pi/pi-coding-agent";
 import { DEFAULT_OPTIMIZER_CONFIG } from "../src/config.ts";
 import { buildOptimizationGrounding } from "../src/grounding.ts";
 import { buildOptimizationRequest } from "../src/request-builder.ts";
@@ -22,6 +19,7 @@ const MODEL: Model<Api> = {
 	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 	contextWindow: 128_000,
 	maxTokens: 4096,
+	compat: {} as Model<Api>["compat"],
 };
 const temporaryDirectories: string[] = [];
 afterEach(async () => {
@@ -45,23 +43,18 @@ function message(role: "user" | "assistant", text: string): SessionEntry {
 function context(
 	cwd: string,
 	entries: readonly SessionEntry[],
-	trusted = false,
-): Pick<
-	ExtensionContext,
-	"cwd" | "getSystemPrompt" | "isProjectTrusted" | "sessionManager"
-> {
+): Pick<ExtensionContext, "cwd" | "getSystemPrompt" | "sessionManager"> {
 	return {
 		cwd,
-		getSystemPrompt: () => `Current working directory: ${cwd}`,
-		isProjectTrusted: () => trusted,
+		getSystemPrompt: () => [`Current working directory: ${cwd}`],
 		sessionManager: {
-			buildContextEntries: () => [...entries],
+			getBranch: () => [...entries],
 		} as unknown as ExtensionContext["sessionManager"],
 	};
 }
 
 describe("optimization grounding", () => {
-	it("grounds a fresh session in the trusted workspace instead of declaring context unnecessary", async () => {
+	it("grounds a fresh session in the workspace instead of declaring context unnecessary", async () => {
 		const cwd = await mkdtemp(join(tmpdir(), "pi-chisel-grounding-"));
 		temporaryDirectories.push(cwd);
 		await writeFile(
@@ -77,7 +70,7 @@ describe("optimization grounding", () => {
 		);
 
 		const grounding = await buildOptimizationGrounding(
-			context(cwd, [], true),
+			context(cwd, []),
 			{ ...DEFAULT_OPTIMIZER_CONFIG },
 			"make this clearer",
 			MODEL,
@@ -140,7 +133,7 @@ describe("optimization grounding", () => {
 		const cwd = await mkdtemp(join(tmpdir(), "pi-chisel-grounding-"));
 		temporaryDirectories.push(cwd);
 		const grounding = await buildOptimizationGrounding(
-			context(cwd, [message("user", "Relevant session detail")], true),
+			context(cwd, [message("user", "Relevant session detail")]),
 			{ ...DEFAULT_OPTIMIZER_CONFIG, contextMode: "none" },
 			"fix it",
 			MODEL,

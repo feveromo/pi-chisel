@@ -2,45 +2,61 @@
 	"name": "pi-chisel",
 	"version": "0.1.0",
 	"private": true,
-	"description": "A native Pi prompt-optimizer extension for polishing unsent drafts.",
+	"description": "A native Oh My Pi prompt-optimizer extension for polishing unsent drafts.",
+	"license": "MIT",
+	"author": "feveromo",
+	"homepage": "https://github.com/feveromo/pi-chisel#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/feveromo/pi-chisel.git"
+	},
+	"bugs": {
+		"url": "https://github.com/feveromo/pi-chisel/issues"
+	},
 	"type": "module",
 	"files": [
 		"src",
 		"README.md",
+		"LICENSE",
+		"SECURITY.md",
 		"docs"
 	],
-	"keywords": [
-		"pi-package"
-	],
 	"engines": {
-		"node": ">=22.19.0"
+		"bun": ">=1.3.14"
 	},
-	"pi": {
+	"keywords": [
+		"oh-my-pi",
+		"omp",
+		"omp-plugin",
+		"prompt-optimizer",
+		"terminal"
+	],
+	"omp": {
 		"extensions": [
 			"./src/index.ts"
 		]
 	},
-	"peerDependencies": {
-		"@earendil-works/pi-ai": "*",
-		"@earendil-works/pi-coding-agent": "*",
-		"@earendil-works/pi-tui": "*"
-	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.0",
-		"@earendil-works/pi-ai": "0.83.0",
-		"@earendil-works/pi-coding-agent": "0.83.0",
-		"@earendil-works/pi-tui": "0.83.0",
+		"@oh-my-pi/pi-agent-core": "17.2.11",
+		"@oh-my-pi/pi-ai": "17.2.11",
+		"@oh-my-pi/pi-catalog": "17.2.11",
+		"@oh-my-pi/pi-coding-agent": "17.2.11",
+		"@oh-my-pi/pi-tui": "17.2.11",
+		"@types/bun": "1.3.14",
 		"@types/node": "24.12.4",
-		"typescript": "5.9.3",
-		"vitest": "4.1.9"
+		"typescript": "5.9.3"
 	},
 	"scripts": {
 		"format": "biome check --write src test package.json tsconfig.json --files-ignore-unknown=true",
 		"lint": "biome check src test package.json tsconfig.json --files-ignore-unknown=true",
 		"check": "tsc --noEmit",
-		"test": "vitest run",
+		"test": "bun test",
 		"test:smoke": "python3 test/smoke-tui.py",
+		"smoke:install": "bash test/smoke-install.sh",
 		"smoke:configured": "bash test/smoke-configured.sh",
-		"validate": "npm run lint && npm run check && npm test && npm run test:smoke && npm run smoke:configured"
+		"audit:prod": "npm audit --omit=dev --ignore-scripts",
+		"pack:check": "npm pack --dry-run --ignore-scripts",
+		"validate": "npm run lint && npm run check && npm test && npm run audit:prod && npm run pack:check && npm run test:smoke && npm run smoke:install"
 	}
 }

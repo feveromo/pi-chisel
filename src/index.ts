@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import { OptimizerConfigStore } from "./config.ts";
 import { PromptOptimizerController } from "./controller.ts";
 
@@ -31,18 +31,18 @@ export default async function promptOptimizerExtension(
 	});
 
 	pi.registerCommand("prompt-optimize-model", {
-		description: "Choose and persist Pi Chisel's independent model",
+		description: "Choose and persist OMP Chisel's independent model",
 		handler: async (_args, ctx) => controller.chooseModel(ctx),
 	});
 
 	pi.registerCommand("prompt-optimize-settings", {
 		description:
-			"Configure Pi Chisel's grounding, intensity, shortcut, and preview",
+			"Configure OMP Chisel's grounding, intensity, shortcut, and preview",
 		handler: async (_args, ctx) => controller.showSettings(ctx),
 	});
 
 	pi.registerCommand("prompt-optimize-restore", {
-		description: "Restore the draft Pi Chisel most recently replaced",
+		description: "Restore the draft OMP Chisel most recently replaced",
 		handler: async (_args, ctx) => controller.restore(ctx),
 	});
 

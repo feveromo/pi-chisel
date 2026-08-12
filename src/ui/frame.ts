@@ -1,9 +1,9 @@
-import { DynamicBorder, type Theme } from "@earendil-works/pi-coding-agent";
+import { DynamicBorder, type Theme } from "@oh-my-pi/pi-coding-agent";
 import {
 	truncateToWidth,
 	visibleWidth,
 	wrapTextWithAnsi,
-} from "@earendil-works/pi-tui";
+} from "@oh-my-pi/pi-tui";
 
 export function accentBorder(theme: Theme): DynamicBorder {
 	return new DynamicBorder((text: string) => theme.fg("borderAccent", text));
@@ -49,7 +49,7 @@ export function overlayFrame(
 	const rows = body.map((content) => {
 		const normalized =
 			visibleWidth(content) > innerWidth
-				? truncateToWidth(content, innerWidth, "…")
+				? truncateToWidth(content, innerWidth)
 				: content;
 		const padded = truncateToWidth(normalized, innerWidth, "", true);
 		return `${theme.fg(borderColor, "│")}${padded}${theme.fg(borderColor, "│")}`;

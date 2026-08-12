@@ -1,16 +1,20 @@
-import { rawKeyHint, type Theme } from "@earendil-works/pi-coding-agent";
+import type { Theme } from "@oh-my-pi/pi-coding-agent";
 import {
 	type Component,
-	decodeKittyPrintable,
+	decodePrintableKey,
 	matchesKey,
 	type TUI,
 	wrapTextWithAnsi,
-} from "@earendil-works/pi-tui";
+} from "@oh-my-pi/pi-tui";
 import type { PreviewMode } from "../config.ts";
 import { createPromptDiff, type PromptDiff } from "./diff.ts";
 import { renderPromptDiffRows } from "./diff-render.ts";
 import { overlayFrame, sanitizeInline, wrapPlainText } from "./frame.ts";
 import { clampViewportOffset, sliceViewport } from "./viewport.ts";
+
+function rawKeyHint(key: string, description: string): string {
+	return `${key} ${description}`;
+}
 
 export type ReviewAction = "accept" | "edit" | "retry" | "model" | "cancel";
 type ReviewView = PreviewMode | "diff";
@@ -59,7 +63,7 @@ export class PromptReviewComponent implements Component {
 	handleInput(data: string): void {
 		if (this.handleControlInput(data)) return;
 		const key = (
-			decodeKittyPrintable(data) ?? (data.length === 1 ? data : "")
+			decodePrintableKey(data) ?? (data.length === 1 ? data : "")
 		).toLowerCase();
 		this.handleShortcutKey(key);
 	}

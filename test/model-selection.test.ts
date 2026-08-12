@@ -1,9 +1,9 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
+import { describe, expect, it } from "bun:test";
+import type { Api, Model } from "@oh-my-pi/pi-ai";
 import type {
 	ExtensionContext,
 	ModelRegistry,
-} from "@earendil-works/pi-coding-agent";
-import { describe, expect, it } from "vitest";
+} from "@oh-my-pi/pi-coding-agent";
 import {
 	calculateContextBudgetForModel,
 	resolveOptimizerModel,
@@ -21,6 +21,7 @@ function model(provider: string, id: string): Model<Api> {
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		contextWindow: 20_000,
 		maxTokens: 4096,
+		compat: {} as Model<Api>["compat"],
 	};
 }
 
@@ -43,6 +44,14 @@ function context(
 }
 
 describe("optimizer model selection", () => {
+	it("uses the current chat model when no optimizer model is pinned", () => {
+		const chat = model("openai-codex", "gpt-5.6-sol");
+		expect(resolveOptimizerModel(null, context(chat, [chat], [chat]))).toEqual({
+			model: chat,
+			source: "current",
+		});
+	});
+
 	it("uses a pinned available model without touching the chat model", () => {
 		const chat = model("chat", "main");
 		const pinned = model("other", "optimizer");
@@ -77,5 +86,12 @@ describe("optimizer model selection", () => {
 		expect(
 			calculateContextBudgetForModel(selected, 19_000, 8000, 2000, 1000),
 		).toBe(0);
+	});
+
+	it("uses the configured grounding budget when OMP has no context-window metadata", () => {
+		const selected = { ...model("p", "m"), contextWindow: null };
+		expect(
+			calculateContextBudgetForModel(selected, 10_000, 8000, 2000, 1000),
+		).toBe(8000);
 	});
 });

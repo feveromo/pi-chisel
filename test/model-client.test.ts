@@ -1,14 +1,16 @@
+import { afterEach, describe, expect, it, mock } from "bun:test";
 import {
 	type Api,
 	type AssistantMessage,
 	type Context,
 	createAssistantMessageEventStream,
+	type Effort,
 	type Model,
-	type Provider,
+	registerCustomApi,
 	type SimpleStreamOptions,
-} from "@earendil-works/pi-ai";
-import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
-import { describe, expect, it, vi } from "vitest";
+	unregisterCustomApis,
+} from "@oh-my-pi/pi-ai";
+import type { ModelRegistry } from "@oh-my-pi/pi-coding-agent";
 import {
 	PromptOptimizationCancelledError,
 	PromptOptimizationError,
@@ -30,7 +32,23 @@ const TEST_MODEL: Model<Api> = {
 	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 	contextWindow: 128_000,
 	maxTokens: 4096,
+	compat: {} as Model<Api>["compat"],
 };
+
+const CURRENT_REASONING_MODEL: Model<Api> = {
+	...TEST_MODEL,
+	provider: "openai-codex",
+	id: "gpt-5.6-sol",
+	name: "GPT-5.6-Sol",
+	reasoning: true,
+	thinking: {
+		mode: "effort",
+		efforts: ["low", "medium", "high", "xhigh", "max"] as Effort[],
+	},
+};
+
+const CUSTOM_API_SOURCE = "omp-chisel-model-client-test";
+afterEach(() => unregisterCustomApis(CUSTOM_API_SOURCE));
 
 function assistant(
 	text: string,
@@ -59,20 +77,13 @@ function harness(response: AssistantMessage) {
 	let seenModel: Model<Api> | undefined;
 	let seenContext: Context | undefined;
 	let seenOptions: SimpleStreamOptions | undefined;
-	const streamSimple = vi.fn(
+	const providerStream = mock(
 		(model: Model<Api>, context: Context, options?: SimpleStreamOptions) => {
 			seenModel = model;
 			seenContext = context;
 			seenOptions = options;
 			const stream = createAssistantMessageEventStream();
 			queueMicrotask(() => {
-				stream.push({ type: "start", partial: response });
-				stream.push({
-					type: "text_delta",
-					contentIndex: 0,
-					delta: "x",
-					partial: response,
-				});
 				stream.push({
 					type: "done",
 					reason: response.stopReason as "stop",
@@ -83,21 +94,19 @@ function harness(response: AssistantMessage) {
 			return stream;
 		},
 	);
-	const provider = { streamSimple } as unknown as Provider;
+	unregisterCustomApis(CUSTOM_API_SOURCE);
+	registerCustomApi(TEST_MODEL.api, providerStream, CUSTOM_API_SOURCE);
+	const credentialResolver = mock(async () => "resolved-by-omp");
 	const registry = {
-		getProvider: () => provider,
-		getApiKeyAndHeaders: async () => ({
-			ok: true as const,
-			apiKey: "resolved-by-pi",
-			headers: { "x-test": "1" },
-		}),
-		getProviderAuth: async () => ({
-			auth: { baseUrl: "https://credential-specific.example" },
-		}),
+		hasProvider: () => true,
+		getProviderBaseUrl: () => "https://credential-specific.example",
+		getProviderHeaders: () => ({ "x-test": "1" }),
+		resolver: () => credentialResolver,
 	} as unknown as ModelRegistry;
 	return {
 		registry,
-		streamSimple,
+		providerStream,
+		credentialResolver,
 		getModel: () => seenModel,
 		getContext: () => seenContext,
 		getOptions: () => seenOptions,
@@ -105,7 +114,7 @@ function harness(response: AssistantMessage) {
 }
 
 describe("prompt optimizer model client", () => {
-	it("uses Pi's registered provider and resolved auth without adding session messages", async () => {
+	it("uses OMP's registered API and credential resolver without adding session messages", async () => {
 		const test = harness(assistant("```text\nA clearer prompt\n```"));
 		const result = await runPromptOptimization({
 			model: TEST_MODEL,
@@ -116,18 +125,35 @@ describe("prompt optimizer model client", () => {
 		});
 
 		expect(result).toBe("A clearer prompt");
-		expect(test.streamSimple).toHaveBeenCalledOnce();
+		expect(test.providerStream).toHaveBeenCalledTimes(1);
+		expect(test.credentialResolver).toHaveBeenCalled();
 		expect(test.getModel()?.baseUrl).toBe(
 			"https://credential-specific.example",
 		);
 		expect(test.getOptions()).toMatchObject({
-			apiKey: "resolved-by-pi",
+			apiKey: "resolved-by-omp",
 			cacheRetention: "none",
-			maxRetries: 0,
+			codexSseMaxAttempts: 1,
+			headers: { "x-test": "1" },
 			temperature: 0.2,
 		});
 		expect(test.getContext()?.messages).toHaveLength(1);
-		expect(test.getContext()?.systemPrompt).toContain("prompt editor");
+		expect(test.getContext()?.systemPrompt?.join("\n")).toContain(
+			"prompt editor",
+		);
+	});
+
+	it("uses the lowest effort supported by the current reasoning model", async () => {
+		const test = harness(assistant("A clearer prompt"));
+		await runPromptOptimization({
+			model: CURRENT_REASONING_MODEL,
+			modelRegistry: test.registry,
+			draft: "make this clear",
+			intensity: "standard",
+			signal: new AbortController().signal,
+		});
+
+		expect(test.getOptions()?.reasoning).toBe("low" as Effort);
 	});
 
 	it("never starts a provider request after cancellation", async () => {
@@ -144,7 +170,7 @@ describe("prompt optimizer model client", () => {
 				signal: controller.signal,
 			}),
 		).rejects.toBeInstanceOf(PromptOptimizationCancelledError);
-		expect(test.streamSimple).not.toHaveBeenCalled();
+		expect(test.providerStream).not.toHaveBeenCalled();
 	});
 
 	it("reserves the full output allowance before starting a request", async () => {
@@ -170,7 +196,7 @@ describe("prompt optimizer model client", () => {
 				signal: new AbortController().signal,
 			}),
 		).rejects.toThrow("without truncating");
-		expect(test.streamSimple).not.toHaveBeenCalled();
+		expect(test.providerStream).not.toHaveBeenCalled();
 	});
 
 	it("rejects empty, unchanged, or truncated output instead of replacing the draft", async () => {
@@ -213,5 +239,19 @@ describe("prompt optimizer model client", () => {
 				signal: new AbortController().signal,
 			}),
 		).resolves.toBe("draft");
+	});
+
+	it("runs with bounded defaults when OMP lacks model token metadata", async () => {
+		const test = harness(assistant("A bounded rewrite"));
+		await expect(
+			runPromptOptimization({
+				model: { ...TEST_MODEL, contextWindow: null, maxTokens: null },
+				modelRegistry: test.registry,
+				draft: "draft",
+				intensity: "standard",
+				signal: new AbortController().signal,
+			}),
+		).resolves.toBe("A bounded rewrite");
+		expect(test.getOptions()?.maxTokens).toBe(1024);
 	});
 });

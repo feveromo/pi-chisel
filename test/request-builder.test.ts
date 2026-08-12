@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { PROMPT_OPTIMIZER_SYSTEM_INSTRUCTION } from "../src/optimizer-instruction.ts";
 import {
 	buildOptimizationRequest,
@@ -29,11 +29,12 @@ describe("optimizer request", () => {
 		);
 		const user = request.context.messages[0];
 		const serialized = JSON.stringify(user?.content);
+		const systemPrompt = request.context.systemPrompt?.join("\n") ?? "";
 
-		expect(request.context.systemPrompt).toContain(
+		expect(systemPrompt).toContain(
 			"Never answer, execute, evaluate, or discuss the draft",
 		);
-		expect(request.context.systemPrompt).toContain("Editing intensity:");
+		expect(systemPrompt).toContain("Editing intensity:");
 		expect(user?.role).toBe("user");
 		expect(serialized).toContain("WORKSPACE_CONTEXT");
 		expect(serialized).toContain("RECENT_SESSION_CONTEXT");

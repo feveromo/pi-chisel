@@ -1,10 +1,7 @@
-import {
-	getSettingsListTheme,
-	type Theme,
-} from "@earendil-works/pi-coding-agent";
+import { getSettingsListTheme, type Theme } from "@oh-my-pi/pi-coding-agent";
 import {
 	Container,
-	decodeKittyPrintable,
+	decodePrintableKey,
 	type KeybindingsConfig,
 	matchesKey,
 	type SettingItem,
@@ -12,7 +9,7 @@ import {
 	Spacer,
 	Text,
 	type TUI,
-} from "@earendil-works/pi-tui";
+} from "@oh-my-pi/pi-tui";
 import type { OptimizerConfig } from "../config.ts";
 import { sanitizeInline } from "./frame.ts";
 
@@ -74,7 +71,7 @@ export class OptimizerSettingsComponent extends Container {
 
 		this.addChild(new Text(theme.fg("borderAccent", "─".repeat(40)), 0, 0));
 		this.addChild(
-			new Text(theme.fg("accent", theme.bold("  ✦ Pi Chisel settings")), 0, 0),
+			new Text(theme.fg("accent", theme.bold("  ✦ OMP Chisel settings")), 0, 0),
 		);
 		this.addChild(
 			new Text(
@@ -131,7 +128,7 @@ export class OptimizerSettingsComponent extends Container {
 			return;
 		}
 		const key = (
-			decodeKittyPrintable(data) ?? (data.length === 1 ? data : "")
+			decodePrintableKey(data) ?? (data.length === 1 ? data : "")
 		).toLowerCase();
 		if (key === "m") {
 			this.finish("model");

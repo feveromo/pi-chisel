@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { sanitizeForDisplay, sanitizeInline } from "../src/ui/frame.ts";
 
 describe("terminal display sanitization", () => {

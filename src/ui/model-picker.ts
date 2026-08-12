@@ -1,5 +1,5 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
-import { rawKeyHint, type Theme } from "@earendil-works/pi-coding-agent";
+import type { Api, Model } from "@oh-my-pi/pi-ai";
+import type { Theme } from "@oh-my-pi/pi-coding-agent";
 import {
 	Container,
 	type Focusable,
@@ -9,9 +9,13 @@ import {
 	Spacer,
 	Text,
 	type TUI,
-} from "@earendil-works/pi-tui";
+} from "@oh-my-pi/pi-tui";
 import type { OptimizerModelPreference } from "../config.ts";
 import { accentBorder, sanitizeInline } from "./frame.ts";
+
+function rawKeyHint(key: string, description: string): string {
+	return `${key} ${description}`;
+}
 
 export type ModelPickerResult =
 	| { kind: "current" }
