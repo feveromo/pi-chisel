@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { analyzeDraft } from "../src/draft-analysis.ts";
 
 describe("draft analysis", () => {
-	it("expands both brief standalone requests and explicit backward references", () => {
+	it("expands backward references, not every brief standalone request", () => {
 		expect(analyzeDraft("What is a B-tree?")).toMatchObject({
 			detail: "brief",
-			contextDemand: "expanded",
+			contextDemand: "ambient",
 			likelyReferential: false,
 		});
 		expect(

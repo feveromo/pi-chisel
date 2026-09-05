@@ -56,7 +56,7 @@ function sideRows(
 	return rows;
 }
 
-export function renderPromptDiffRows(
+function renderHunkRows(
 	diff: PromptDiff,
 	theme: Theme,
 	width: number,
@@ -67,4 +67,63 @@ export function renderPromptDiffRows(
 		theme.fg("dim", "+++ chiseled"),
 		...sideRows(diff, "after", theme, width),
 	];
+}
+
+export function promptDiffHunks(diff: PromptDiff): PromptDiff[] {
+	if (diff.coarse) return [diff];
+	const hunks: PromptDiff[] = [];
+	let parts: DiffPart[] = [];
+	let leading = "";
+	const finish = () => {
+		if (parts.some((p) => p.kind !== "equal")) hunks.push({ ...diff, parts });
+		parts = [];
+	};
+	for (const part of diff.parts) {
+		if (
+			part.kind === "equal" &&
+			(part.text.length > 160 || (part.text.match(/\n/g)?.length ?? 0) > 3)
+		) {
+			if (parts.length)
+				parts.push({ kind: "equal", text: `${part.text.slice(0, 70)}…` });
+			finish();
+			leading = `…${part.text.slice(-70)}`;
+		} else {
+			if (!parts.length && leading) {
+				parts.push({ kind: "equal", text: leading });
+				leading = "";
+			}
+			parts.push(part);
+		}
+	}
+	finish();
+	return hunks;
+}
+
+export function renderPromptDiffView(
+	diff: PromptDiff,
+	theme: Theme,
+	width: number,
+): { rows: string[]; changeOffsets: number[] } {
+	const hunks = promptDiffHunks(diff);
+	const rows: string[] = [];
+	const changeOffsets: number[] = [];
+	for (const [index, hunk] of hunks.entries()) {
+		changeOffsets.push(rows.length);
+		rows.push(
+			theme.fg("accent", `Change ${index + 1}/${hunks.length}`),
+			...renderHunkRows(hunk, theme, width),
+			"",
+		);
+	}
+	if (!hunks.length)
+		rows.push(theme.fg("muted", "Already good · no wording changes."));
+	return { rows, changeOffsets };
+}
+
+export function renderPromptDiffRows(
+	diff: PromptDiff,
+	theme: Theme,
+	width: number,
+): string[] {
+	return renderPromptDiffView(diff, theme, width).rows;
 }

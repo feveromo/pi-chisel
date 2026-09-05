@@ -18,6 +18,7 @@
 		"src",
 		"README.md",
 		"LICENSE",
+		"SECURITY.md",
 		"docs"
 	],
 	"keywords": [
@@ -53,7 +54,8 @@
 		"check": "tsc --noEmit",
 		"test": "vitest run",
 		"test:smoke": "python3 test/smoke-tui.py",
+		"test:capture": "python3 -m unittest discover -s test -p 'test_*.py'",
 		"smoke:configured": "bash test/smoke-configured.sh",
-		"validate": "npm run lint && npm run check && npm test && npm run test:smoke && npm run smoke:configured"
+		"validate": "npm run lint && npm run check && npm test && npm run test:capture && npm run test:smoke && npm run smoke:configured"
 	}
 }

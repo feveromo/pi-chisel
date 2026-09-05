@@ -15,13 +15,14 @@ const MODEL: Model<Api> = {
 	provider: "test",
 	id: "grounding-model",
 	name: "Grounding Model",
-	api: "test",
+	api: "openai-responses",
 	baseUrl: "https://example.invalid",
 	reasoning: false,
 	input: ["text"],
 	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 	contextWindow: 128_000,
 	maxTokens: 4096,
+	compat: {},
 };
 const temporaryDirectories: string[] = [];
 afterEach(async () => {
@@ -45,7 +46,6 @@ function message(role: "user" | "assistant", text: string): SessionEntry {
 function context(
 	cwd: string,
 	entries: readonly SessionEntry[],
-	trusted = false,
 ): Pick<
 	ExtensionContext,
 	"cwd" | "getSystemPrompt" | "isProjectTrusted" | "sessionManager"
@@ -53,7 +53,7 @@ function context(
 	return {
 		cwd,
 		getSystemPrompt: () => `Current working directory: ${cwd}`,
-		isProjectTrusted: () => trusted,
+		isProjectTrusted: () => true,
 		sessionManager: {
 			buildContextEntries: () => [...entries],
 		} as unknown as ExtensionContext["sessionManager"],
@@ -61,7 +61,7 @@ function context(
 }
 
 describe("optimization grounding", () => {
-	it("grounds a fresh session in the trusted workspace instead of declaring context unnecessary", async () => {
+	it("grounds a fresh session in the workspace instead of declaring context unnecessary", async () => {
 		const cwd = await mkdtemp(join(tmpdir(), "pi-chisel-grounding-"));
 		temporaryDirectories.push(cwd);
 		await writeFile(
@@ -77,7 +77,7 @@ describe("optimization grounding", () => {
 		);
 
 		const grounding = await buildOptimizationGrounding(
-			context(cwd, [], true),
+			context(cwd, []),
 			{ ...DEFAULT_OPTIMIZER_CONFIG },
 			"make this clearer",
 			MODEL,
@@ -100,12 +100,15 @@ describe("optimization grounding", () => {
 		);
 	});
 
-	it("allocates more recent-session evidence to brief drafts than developed drafts", async () => {
+	it("allocates more session capacity to explicit references, not brevity alone", async () => {
 		const cwd = await mkdtemp(join(tmpdir(), "pi-chisel-grounding-"));
 		temporaryDirectories.push(cwd);
 		const entries = [
-			message("user", `original goal ${"u".repeat(5000)}`),
-			message("assistant", `latest implementation ${"a".repeat(5000)}`),
+			message("user", `original goal.\n${"User detail.\n".repeat(400)}`),
+			message(
+				"assistant",
+				`latest implementation.\n${"Assistant detail.\n".repeat(400)}`,
+			),
 		];
 		const ctx = context(cwd, entries);
 		const shortGrounding = await buildOptimizationGrounding(
@@ -132,15 +135,47 @@ describe("optimization grounding", () => {
 			developedGrounding.reference?.conversation?.estimatedTokens ?? 0,
 		);
 		expect(
-			developedGrounding.reference?.conversation?.estimatedTokens,
+			developedGrounding.reference?.conversation?.estimatedTokens ?? 0,
 		).toBeLessThanOrEqual(512);
+	});
+
+	it("does not let workspace metadata consume a small user-intent budget", async () => {
+		const cwd = await mkdtemp(join(tmpdir(), "pi-chisel-grounding-"));
+		temporaryDirectories.push(cwd);
+		await writeFile(
+			join(cwd, "package.json"),
+			JSON.stringify({
+				name: "demo",
+				description: "Workspace metadata. ".repeat(60),
+			}),
+		);
+		await writeFile(
+			join(cwd, "README.md"),
+			`# Demo\n${"Project overview.\n".repeat(100)}`,
+		);
+		const grounding = await buildOptimizationGrounding(
+			context(cwd, [
+				message("user", "Discuss options only. Do not implement anything."),
+			]),
+			{
+				...DEFAULT_OPTIMIZER_CONFIG,
+				contextMode: "recent",
+				contextTokenBudget: 256,
+			},
+			"Improve this.",
+			MODEL,
+		);
+		expect(grounding.reference?.conversation?.text).toContain(
+			"Do not implement anything.",
+		);
+		expect(grounding.reference?.estimatedTokens).toBeLessThanOrEqual(256);
 	});
 
 	it("keeps none as an explicit draft-only mode", async () => {
 		const cwd = await mkdtemp(join(tmpdir(), "pi-chisel-grounding-"));
 		temporaryDirectories.push(cwd);
 		const grounding = await buildOptimizationGrounding(
-			context(cwd, [message("user", "Relevant session detail")], true),
+			context(cwd, [message("user", "Relevant session detail")]),
 			{ ...DEFAULT_OPTIMIZER_CONFIG, contextMode: "none" },
 			"fix it",
 			MODEL,

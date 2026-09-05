@@ -7,10 +7,14 @@ import {
 } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import type { OptimizerIntensity } from "./config.ts";
-import type { OptimizationReference } from "./request-builder.ts";
+import type {
+	OptimizationReference,
+	OptimizationRevision,
+} from "./request-builder.ts";
 import {
 	buildOptimizationRequest,
 	calculateMaxOutputTokens,
+	estimateTextTokens,
 	stripAccidentalFence,
 } from "./request-builder.ts";
 
@@ -37,6 +41,7 @@ export interface RunPromptOptimizationOptions {
 	modelRegistry: ModelRegistry;
 	draft: string;
 	reference?: OptimizationReference;
+	revision?: OptimizationRevision;
 	intensity: OptimizerIntensity;
 	signal: AbortSignal;
 	timeoutMs?: number;
@@ -105,7 +110,6 @@ async function consumeOptimizationStream(
 function validateOptimizationResponse(
 	finalMessage: AssistantMessage,
 	draft: string,
-	intensity: OptimizerIntensity,
 ): string {
 	if (finalMessage.stopReason === "length") {
 		throw new PromptOptimizationError(
@@ -121,12 +125,7 @@ function validateOptimizationResponse(
 	const optimized = stripAccidentalFence(responseText(finalMessage), draft);
 	if (!optimized.trim())
 		throw new PromptOptimizationError("Chisel returned an empty prompt.");
-	if (intensity !== "light" && optimized.trim() === draft.trim()) {
-		throw new PromptOptimizationError(
-			"Chisel returned the draft unchanged, so the original was left untouched.",
-		);
-	}
-	return optimized;
+	return optimized.trim() === draft.trim() ? draft : optimized;
 }
 
 export async function runPromptOptimization(
@@ -137,6 +136,7 @@ export async function runPromptOptimization(
 		modelRegistry,
 		draft,
 		reference,
+		revision,
 		intensity,
 		signal,
 		onTextDelta,
@@ -152,15 +152,23 @@ export async function runPromptOptimization(
 	const requestModel = await resolveRequestModel(model, modelRegistry);
 	if (signal.aborted) throw new PromptOptimizationCancelledError();
 
-	const request = buildOptimizationRequest(draft, reference, intensity);
-	const maxTokens = calculateMaxOutputTokens(
+	const request = buildOptimizationRequest(
 		draft,
+		reference,
+		intensity,
+		revision,
+	);
+	const maxTokens = calculateMaxOutputTokens(
+		revision &&
+			estimateTextTokens(revision.candidate) > estimateTextTokens(draft)
+			? revision.candidate
+			: draft,
 		model.maxTokens,
 		Boolean(model.reasoning),
 	);
 	if (request.estimatedInputTokens + maxTokens + 4096 > model.contextWindow) {
 		throw new PromptOptimizationError(
-			`The draft is too long for ${model.provider}/${model.id} without truncating it. Choose a model with a larger context window.`,
+			`This request is too long for ${model.provider}/${model.id} without truncating your text. Choose a larger model or shorten the candidate or feedback.`,
 		);
 	}
 
@@ -190,7 +198,7 @@ export async function runPromptOptimization(
 		signal,
 		onTextDelta,
 	);
-	return validateOptimizationResponse(finalMessage, draft, intensity);
+	return validateOptimizationResponse(finalMessage, draft);
 }
 
 export function friendlyOptimizationError(error: unknown): string {

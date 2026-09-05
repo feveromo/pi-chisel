@@ -24,7 +24,11 @@ export class PromptOptimizerController {
 		this.state = new OptimizerState(store, config, warning);
 	}
 
-	async optimize(ctx: ExtensionContext, explicitDraft?: string): Promise<void> {
+	async optimize(
+		ctx: ExtensionContext,
+		explicitDraft?: string,
+		inspectContext = false,
+	): Promise<void> {
 		if (ctx.mode !== "tui") {
 			ctx.ui.notify("Pi Chisel needs Pi's interactive TUI.", "error");
 			return;
@@ -60,6 +64,7 @@ export class PromptOptimizerController {
 				invocation,
 				state: this.state,
 				capturedDraft: draft,
+				inspectContext,
 				isActive: () => !this.disposed && this.active?.id === invocation.id,
 				chooseModel: () => chooseOptimizerModel(ctx, this.state, invocation),
 			});
@@ -89,7 +94,14 @@ export class PromptOptimizerController {
 			);
 			return;
 		}
-		if (await restoreReplacement(ctx, this.lastReplacement))
+		if (
+			await restoreReplacement(
+				ctx,
+				this.lastReplacement,
+				undefined,
+				() => !this.disposed,
+			)
+		)
 			this.lastReplacement = undefined;
 	}
 

@@ -69,6 +69,9 @@ Current working directory: /work`;
 <project_instructions path="${join(root, "AGENTS.md")}">
 Match existing style and run the narrowest proof first.
 </project_instructions>
+<project_instructions path="${join(root, "..", "AGENTS.md")}">
+Private user-level guidance must stay out of project context.
+</project_instructions>
 </project_context>`,
 		});
 
@@ -82,6 +85,8 @@ Match existing style and run the narrowest proof first.
 		expect(reference?.text).toContain("Match existing style");
 		expect(reference?.text).toContain("Turns terse drafts");
 		expect(reference?.text).not.toContain("Unrelated generic system text");
+		expect(reference?.text).not.toContain("Private user-level guidance");
+		expect(reference?.text).not.toContain(root);
 	});
 
 	it("does not follow project metadata symlinks outside the intended file", async () => {
@@ -106,7 +111,7 @@ Match existing style and run the narrowest proof first.
 		expect(reference?.text).not.toContain("sensitive material");
 	});
 
-	it("does not inspect project files before Pi trusts the workspace", async () => {
+	it("does not inspect project files when workspace access is disabled", async () => {
 		const { cwd } = await projectFixture();
 		const reference = await buildWorkspaceReference({
 			cwd,

@@ -6,7 +6,7 @@ import type { KeyId } from "@earendil-works/pi-tui";
 
 export type ContextMode = "none" | "recent" | "auto";
 export type OptimizerIntensity = "light" | "standard" | "strong";
-export type PreviewMode = "optimized" | "original";
+export type PreviewMode = "optimized" | "original" | "diff";
 
 export interface OptimizerModelPreference {
 	provider: string;
@@ -21,6 +21,7 @@ export interface OptimizerConfig {
 	intensity: OptimizerIntensity;
 	shortcut: KeyId;
 	previewMode: PreviewMode;
+	inspectContext: boolean;
 }
 
 export const DEFAULT_OPTIMIZER_CONFIG: Readonly<OptimizerConfig> =
@@ -32,6 +33,7 @@ export const DEFAULT_OPTIMIZER_CONFIG: Readonly<OptimizerConfig> =
 		intensity: "standard",
 		shortcut: "ctrl+shift+k",
 		previewMode: "optimized",
+		inspectContext: false,
 	});
 
 const MODIFIERS = new Set(["ctrl", "shift", "alt", "super"]);
@@ -219,11 +221,20 @@ export function parseOptimizerConfig(value: unknown): ParsedConfig {
 	const previewMode = isOneOf(value.previewMode, [
 		"optimized",
 		"original",
+		"diff",
 	] as const)
 		? value.previewMode
 		: DEFAULT_OPTIMIZER_CONFIG.previewMode;
 	if (value.previewMode !== undefined && previewMode !== value.previewMode)
 		invalid.push("previewMode");
+
+	const inspectContext =
+		typeof value.inspectContext === "boolean" ? value.inspectContext : false;
+	if (
+		value.inspectContext !== undefined &&
+		typeof value.inspectContext !== "boolean"
+	)
+		invalid.push("inspectContext");
 
 	const config: OptimizerConfig = {
 		version: 1,
@@ -233,6 +244,7 @@ export function parseOptimizerConfig(value: unknown): ParsedConfig {
 		intensity,
 		shortcut: shortcut ?? DEFAULT_OPTIMIZER_CONFIG.shortcut,
 		previewMode,
+		inspectContext,
 	};
 	if (invalid.length === 0) return { config };
 
