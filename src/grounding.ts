@@ -4,20 +4,24 @@ import type { OptimizerConfig } from "./config.ts";
 import {
 	buildConversationReference,
 	extractVisibleContextItems,
+	toolEvidenceCandidates,
 } from "./context-builder.ts";
 import { analyzeDraft } from "./draft-analysis.ts";
 import { calculateContextBudgetForModel } from "./model-selection.ts";
 import { buildWorkspaceReference } from "./project-context.ts";
 import {
 	buildOptimizationRequest,
+	type ContextSource,
 	calculateMaxOutputTokens,
 	estimateTextTokens,
 	type OptimizationReference,
+	type OptimizationRevision,
 } from "./request-builder.ts";
 
 export interface OptimizationGrounding {
 	reference?: OptimizationReference;
 	summary: string;
+	toolCandidates?: ContextSource[];
 }
 
 type GroundingExtensionContext = Pick<
@@ -62,6 +66,36 @@ function contextSummary(
 	return `${parts.join(" + ")} · ~${reference.estimatedTokens.toLocaleString()} context tokens`;
 }
 
+export function groundingBudget(
+	config: OptimizerConfig,
+	draft: string,
+	model: Model<Api>,
+	revision?: OptimizationRevision,
+): number {
+	const withoutReference = buildOptimizationRequest(
+		draft,
+		undefined,
+		config.intensity,
+		revision,
+	);
+	const outputDraft =
+		revision &&
+		estimateTextTokens(revision.candidate) > estimateTextTokens(draft)
+			? revision.candidate
+			: draft;
+	return calculateContextBudgetForModel(
+		model,
+		0,
+		config.contextTokenBudget,
+		calculateMaxOutputTokens(
+			outputDraft,
+			model.maxTokens,
+			Boolean(model.reasoning),
+		),
+		withoutReference.estimatedInputTokens + REFERENCE_WRAPPER_RESERVE_TOKENS,
+	);
+}
+
 export async function buildOptimizationGrounding(
 	ctx: GroundingExtensionContext,
 	config: OptimizerConfig,
@@ -70,44 +104,14 @@ export async function buildOptimizationGrounding(
 ): Promise<OptimizationGrounding> {
 	if (config.contextMode === "none") return { summary: "context disabled" };
 
-	const draftTokens = estimateTextTokens(draft);
-	const outputTokens = calculateMaxOutputTokens(
-		draft,
-		model.maxTokens,
-		Boolean(model.reasoning),
-	);
-	const withoutReference = buildOptimizationRequest(
-		draft,
-		undefined,
-		config.intensity,
-	);
-	const framingTokens = Math.max(
-		0,
-		withoutReference.estimatedInputTokens - draftTokens,
-	);
-	const totalBudget = calculateContextBudgetForModel(
-		model,
-		draftTokens,
-		config.contextTokenBudget,
-		outputTokens,
-		framingTokens + REFERENCE_WRAPPER_RESERVE_TOKENS,
-	);
+	const totalBudget = groundingBudget(config, draft, model);
 	if (totalBudget <= 0)
 		return { summary: "draft only · context window is full" };
 
 	const entries = ctx.sessionManager.buildContextEntries();
 	const hasSessionEvidence = extractVisibleContextItems(entries).length > 0;
 	const workspaceLimit = hasSessionEvidence
-		? Math.min(
-				totalBudget,
-				Math.max(
-					256,
-					Math.min(
-						MAX_WORKSPACE_TOKENS_WITH_SESSION,
-						Math.floor(totalBudget * 0.4),
-					),
-				),
-			)
+		? Math.min(MAX_WORKSPACE_TOKENS_WITH_SESSION, Math.floor(totalBudget * 0.4))
 		: Math.min(totalBudget, MAX_WORKSPACE_TOKENS_FRESH_SESSION);
 
 	let systemPrompt = "";
@@ -116,13 +120,14 @@ export async function buildOptimizationGrounding(
 		systemPrompt = ctx.getSystemPrompt();
 		trusted = ctx.isProjectTrusted();
 	} catch {
-		// A workspace identity reference still works if runtime context is unavailable.
+		// Workspace extraction still works if the runtime prompt is unavailable.
 	}
 	const workspace = await buildWorkspaceReference({
 		cwd: ctx.cwd,
 		systemPrompt,
 		trusted,
 		tokenBudget: workspaceLimit,
+		...(config.contextMode === "auto" ? { draft } : {}),
 	});
 	const remainingBudget = Math.max(
 		0,
@@ -137,11 +142,14 @@ export async function buildOptimizationGrounding(
 		entries,
 		config.contextMode,
 		conversationBudget,
+		draft,
 	);
 	const conversation = conversationResult.reference;
 
+	const toolCandidates = toolEvidenceCandidates(entries, draft);
 	if (!workspace && !conversation) {
 		return {
+			toolCandidates,
 			summary:
 				conversationResult.reason === "budget-exhausted"
 					? "draft only · context did not fit"
@@ -157,6 +165,7 @@ export async function buildOptimizationGrounding(
 	};
 	return {
 		reference,
+		toolCandidates,
 		summary: contextSummary(reference, hasSessionEvidence),
 	};
 }

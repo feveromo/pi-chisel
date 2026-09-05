@@ -1,4 +1,4 @@
-import { rawKeyHint, type Theme } from "@earendil-works/pi-coding-agent";
+import type { Theme } from "@earendil-works/pi-coding-agent";
 import {
 	type Component,
 	decodeKittyPrintable,
@@ -8,11 +8,26 @@ import {
 } from "@earendil-works/pi-tui";
 import type { PreviewMode } from "../config.ts";
 import { createPromptDiff, type PromptDiff } from "./diff.ts";
-import { renderPromptDiffRows } from "./diff-render.ts";
+import { renderPromptDiffView } from "./diff-render.ts";
 import { overlayFrame, sanitizeInline, wrapPlainText } from "./frame.ts";
 import { clampViewportOffset, sliceViewport } from "./viewport.ts";
 
-export type ReviewAction = "accept" | "edit" | "retry" | "model" | "cancel";
+function rawKeyHint(key: string, description: string): string {
+	return `${key} ${description}`;
+}
+
+export type ReviewAction =
+	| "accept"
+	| "edit"
+	| "retry"
+	| "model"
+	| "context"
+	| "previous"
+	| "cancel";
+export interface ReviewPosition {
+	view: PreviewMode;
+	offset: number;
+}
 type ReviewView = PreviewMode | "diff";
 
 const PREVIEW_ROWS = 11;
@@ -28,6 +43,8 @@ const REVIEW_ACTION_BY_KEY: Readonly<Record<string, ReviewAction>> = {
 	r: "retry",
 	m: "model",
 	q: "cancel",
+	c: "context",
+	b: "previous",
 };
 
 export interface PromptReviewOptions {
@@ -37,6 +54,8 @@ export interface PromptReviewOptions {
 	modelRef: string;
 	contextSummary: string;
 	warning?: string;
+	hasPrevious?: boolean;
+	position?: ReviewPosition;
 	onAction: (action: ReviewAction) => void;
 }
 
@@ -46,13 +65,17 @@ export class PromptReviewComponent implements Component {
 	private scrollOffset = 0;
 	private renderedLineCount = 0;
 	private readonly diff: PromptDiff;
+	private changeOffsets: number[] = [];
+	private previewRows = PREVIEW_ROWS;
+	private lastWidth = 76;
 
 	constructor(
 		private readonly tui: TUI,
 		private readonly theme: Theme,
 		private readonly options: PromptReviewOptions,
 	) {
-		this.view = options.initialView;
+		this.view = options.position?.view ?? options.initialView;
+		this.scrollOffset = options.position?.offset ?? 0;
 		this.diff = createPromptDiff(options.original, options.optimized);
 	}
 
@@ -79,7 +102,13 @@ export class PromptReviewComponent implements Component {
 		}
 		for (const [key, delta] of SCROLL_KEYS) {
 			if (!matchesKey(data, key)) continue;
-			this.scrollBy(delta);
+			this.scrollBy(
+				key === "pageUp"
+					? -this.previewRows
+					: key === "pageDown"
+						? this.previewRows
+						: delta,
+			);
 			return true;
 		}
 		if (matchesKey(data, "home")) {
@@ -94,13 +123,32 @@ export class PromptReviewComponent implements Component {
 	}
 
 	private handleShortcutKey(key: string): void {
-		if (key === "v") this.cycleView();
+		if (key === "n" || key === "]" || key === "p" || key === "[") {
+			this.jumpChange(key === "n" || key === "]" ? 1 : -1);
+		} else if (key === "v") this.cycleView();
 		else if (key === "d") this.setView("diff");
 		else if (key === "o") this.setView("original");
 		else {
 			const action = REVIEW_ACTION_BY_KEY[key];
-			if (action) this.options.onAction(action);
+			if (action && (action !== "previous" || this.options.hasPrevious))
+				this.options.onAction(action);
 		}
+	}
+
+	private jumpChange(direction: number): void {
+		const wasDiff = this.view === "diff";
+		this.view = "diff";
+		this.contentRows(this.lastWidth);
+		const offsets = this.changeOffsets.map((offset) =>
+			clampViewportOffset(offset, this.renderedLineCount, this.previewRows),
+		);
+		const target = !wasDiff
+			? offsets[0]
+			: direction > 0
+				? (offsets.find((offset) => offset > this.scrollOffset) ?? offsets[0])
+				: (offsets.findLast((offset) => offset < this.scrollOffset) ??
+					offsets.at(-1));
+		this.setScrollOffset(target ?? 0);
 	}
 
 	private cycleView(): void {
@@ -123,14 +171,18 @@ export class PromptReviewComponent implements Component {
 		this.scrollOffset = clampViewportOffset(
 			offset,
 			this.renderedLineCount,
-			PREVIEW_ROWS,
+			this.previewRows,
 		);
 		this.tui.requestRender();
 	}
 
 	private contentRows(width: number): string[] {
-		if (this.view === "diff")
-			return renderPromptDiffRows(this.diff, this.theme, width);
+		if (this.view === "diff") {
+			const rendered = renderPromptDiffView(this.diff, this.theme, width);
+			this.changeOffsets = rendered.changeOffsets;
+			this.renderedLineCount = rendered.rows.length;
+			return rendered.rows;
+		}
 
 		const shown =
 			this.view === "optimized"
@@ -150,7 +202,12 @@ export class PromptReviewComponent implements Component {
 			this.view === "optimized"
 				? this.options.optimized
 				: this.options.original;
-		const label = this.view === "optimized" ? "CHISELED" : "ORIGINAL";
+		const label =
+			this.view === "optimized"
+				? this.options.optimized === this.options.original
+					? "ALREADY GOOD"
+					: "CHISELED"
+				: "ORIGINAL";
 		return `${this.theme.fg("accent", this.theme.bold(label))}${this.theme.fg("dim", ` · ${shown.length.toLocaleString()} chars`)}`;
 	}
 
@@ -173,16 +230,29 @@ export class PromptReviewComponent implements Component {
 
 	render(width: number): string[] {
 		const inner = Math.max(10, width - 6);
+		this.lastWidth = inner;
+		this.previewRows = Math.max(
+			3,
+			Math.min(20, Math.floor((this.tui.terminal?.rows ?? 42) * 0.84) - 24),
+		);
 		const content = this.contentRows(inner);
 		this.renderedLineCount = content.length;
-		const viewport = sliceViewport(content, this.scrollOffset, PREVIEW_ROWS);
+		const viewport = sliceViewport(
+			content,
+			this.scrollOffset,
+			this.previewRows,
+		);
 		this.scrollOffset = viewport.offset;
+		if (this.options.position) {
+			this.options.position.view = this.view;
+			this.options.position.offset = this.scrollOffset;
+		}
 
 		const body = [
 			` ${this.theme.fg("accent", this.theme.bold("✦ Fresh off the Chisel"))}`,
 			...this.wrappedRow(`Model: ${this.options.modelRef}`, "muted", inner),
 			...this.wrappedRow(
-				`Grounded in: ${this.options.contextSummary}`,
+				`Context supplied: ${this.options.contextSummary}`,
 				"muted",
 				inner,
 			),
@@ -209,7 +279,7 @@ export class PromptReviewComponent implements Component {
 		}
 
 		const primary = `${rawKeyHint("enter", "use this")}  ${rawKeyHint("e", "tune it")}  ${rawKeyHint("tab", this.tabLabel())}`;
-		const secondary = `${rawKeyHint("r", "another pass")}  ${rawKeyHint("m", "switch model")}`;
+		const secondary = `${rawKeyHint("r", "another pass")}  ${rawKeyHint("c", "context")}  ${rawKeyHint("m", "switch model")}${this.options.hasPrevious ? "  b previous candidate" : ""}`;
 		const exit = rawKeyHint("esc", "keep original");
 		const primaryRows = wrapTextWithAnsi(
 			this.theme.fg("accent", primary),
@@ -222,7 +292,19 @@ export class PromptReviewComponent implements Component {
 		const exitRows = wrapTextWithAnsi(this.theme.fg("muted", exit), inner).map(
 			(line) => ` ${line}`,
 		);
-		body.push("", ...primaryRows, ...secondaryRows, ...exitRows);
+		body.push(
+			"",
+			...primaryRows,
+			...secondaryRows,
+			...(this.view === "diff"
+				? this.wrappedRow(
+						"n/p next/previous change · d changes · o original",
+						"muted",
+						inner,
+					)
+				: []),
+			...exitRows,
+		);
 
 		return overlayFrame(this.theme, width, body, true);
 	}

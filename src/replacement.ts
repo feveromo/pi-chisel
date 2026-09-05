@@ -12,6 +12,7 @@ export async function acceptReplacement(
 	invocation: InvocationHandle,
 	capturedDraft: string,
 	optimized: string,
+	isActive: () => boolean = () => true,
 ): Promise<ReplacementRecord | undefined> {
 	const current = ctx.ui.getEditorText();
 	let replacement = optimized;
@@ -39,7 +40,8 @@ export async function acceptReplacement(
 			invocation,
 			"keep newer",
 		);
-		if (choice === "cancel" || choice === undefined) return undefined;
+		if (!isActive() || choice === "cancel" || choice === undefined)
+			return undefined;
 		if (choice === "merge") {
 			const merged = await ctx.ui.editor(
 				"Merge drafts (newer first, chiseled second)",
@@ -50,6 +52,7 @@ export async function acceptReplacement(
 		}
 	}
 
+	if (!isActive()) return undefined;
 	if (replacement === current) {
 		await showNotice(
 			ctx,
@@ -60,6 +63,15 @@ export async function acceptReplacement(
 		return undefined;
 	}
 
+	if (ctx.ui.getEditorText() !== current) {
+		await showNotice(
+			ctx,
+			"Draft changed again",
+			"Newer input was preserved. Review it before trying again.",
+			invocation,
+		);
+		return undefined;
+	}
 	const record = { before: current, after: replacement };
 	ctx.ui.setEditorText(replacement);
 	const undo = await showChoice(
@@ -79,7 +91,7 @@ export async function acceptReplacement(
 	);
 	if (undo !== "restore") return record;
 
-	const restored = await restoreReplacement(ctx, record, invocation);
+	const restored = await restoreReplacement(ctx, record, invocation, isActive);
 	return restored ? undefined : record;
 }
 
@@ -87,6 +99,7 @@ export async function restoreReplacement(
 	ctx: ExtensionContext,
 	record: ReplacementRecord,
 	invocation?: InvocationHandle,
+	isActive: () => boolean = () => true,
 ): Promise<boolean> {
 	const current = ctx.ui.getEditorText();
 	let restored = record.before;
@@ -108,7 +121,8 @@ export async function restoreReplacement(
 			invocation,
 			"keep newer input",
 		);
-		if (choice === "cancel" || choice === undefined) return false;
+		if (!isActive() || choice === "cancel" || choice === undefined)
+			return false;
 		if (choice === "merge") {
 			const merged = await ctx.ui.editor(
 				"Merge drafts (newer first, previous second)",
@@ -119,6 +133,7 @@ export async function restoreReplacement(
 		}
 	}
 
+	if (!isActive() || ctx.ui.getEditorText() !== current) return false;
 	ctx.ui.setEditorText(restored);
 	await showNotice(
 		ctx,

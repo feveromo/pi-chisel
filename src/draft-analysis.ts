@@ -10,7 +10,7 @@ export interface DraftProfile {
 
 const REFERENTIAL_PATTERNS = [
 	/\b(?:again|previous|prior|earlier|above|last time|same (?:style|format|approach|way)|as before)\b/i,
-	/\b(?:do|fix|change|rewrite|improve|continue|finish|repeat|restore|revert|use)\s+(?:it|that|this|those|them)\b/i,
+	/\b(?:do|fix|change|rewrite|improve|continue|finish|repeat|restore|revert|use|make|polish|clarify|tune|inspect|review|refactor|update)\s+(?:it|that|this|those|them)\b/i,
 	/\b(?:that|this|it|those|these)\s+(?:one|version|draft|result|answer|response|implementation|plan|style)\b/i,
 	/\b(?:the previous|the last|what you|you just|we discussed|we decided)\b/i,
 ];
@@ -32,8 +32,7 @@ export function analyzeDraft(draft: string): DraftProfile {
 
 	return {
 		detail,
-		contextDemand:
-			likelyReferential || detail === "brief" ? "expanded" : "ambient",
+		contextDemand: likelyReferential ? "expanded" : "ambient",
 		likelyReferential,
 		wordCount,
 	};

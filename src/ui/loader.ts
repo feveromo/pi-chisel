@@ -37,7 +37,10 @@ export class PromptOptimizationLoader extends Container {
 		);
 		this.addChild(
 			new Text(
-				theme.fg("muted", `  Grounded in: ${sanitizeInline(contextSummary)}`),
+				theme.fg(
+					"muted",
+					`  Context supplied: ${sanitizeInline(contextSummary)}`,
+				),
 				0,
 				0,
 			),

@@ -55,11 +55,30 @@ if result.returncode != 0:
     raise SystemExit(result.stderr or f"Pi RPC exited with {result.returncode}")
 PY
 
-jq -e --arg entry "$root/src/index.ts" '
-  select(.type == "response" and .command == "get_commands")
-  | .data.commands[]
-  | select(.name == "prompt-optimize" and .sourceInfo.path == $entry)
-' "$output" >/dev/null
+python3 - "$output" "$root/src/index.ts" <<'PY'
+import json
+import re
+import sys
+from pathlib import Path
+
+expected = Path(sys.argv[2]).resolve()
+commands = []
+for line in Path(sys.argv[1]).read_text().splitlines():
+    response = json.loads(line)
+    if response.get("type") == "response" and response.get("command") == "get_commands":
+        commands = response.get("data", {}).get("commands", [])
+
+for name in ("prompt-optimize", "prompt-optimize-context"):
+    command = next((item for item in commands if item.get("name") == name), None)
+    if not command or not command.get("sourceInfo", {}).get("path"):
+        raise SystemExit(f"Configured Pi did not register {name}")
+    entry = Path(command["sourceInfo"]["path"]).expanduser().resolve()
+    if entry != expected:
+        # Allow one plain re-export used to give a local extension a display name.
+        wrapper = re.fullmatch(r'''\s*(?://[^\n]*\n\s*)*export\s*\{\s*default\s*\}\s*from\s*["']([^"']+)["'];?\s*''', entry.read_text())
+        if not wrapper or (entry.parent / wrapper[1]).resolve() != expected:
+            raise SystemExit(f"{name} resolves to {entry}, not {expected} or its plain re-export")
+PY
 
 printf 'Configured Pi runtime resolved prompt-optimize from %s\n' "$root/src/index.ts"
 PI_CHISEL_CONFIGURED=1 PI_CHISEL_SMOKE_SHORTCUT="$shortcut" PI_BIN="$pi_bin" \

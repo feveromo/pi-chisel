@@ -65,12 +65,13 @@ Pi Chisel composes only native `Container`, `Text`, `Input`, `SelectList`, `Sett
 
 Grounding has two independently bounded layers:
 
-1. **Workspace evidence.** Every `auto` or `recent` invocation includes at least the current workspace identity. A trusted workspace can also contribute the detected project root and branch, a package/language manifest summary, a short README overview, top-level landmarks, and bounded project guidance extracted from Pi’s `<project_context>`. An untrusted workspace is never inspected beyond its identity.
-2. **Active-session evidence.** The builder retains recent user and assistant text plus compaction and branch summaries. It intentionally excludes thinking blocks, tool calls, tool results, hidden custom entries, extension metadata, telemetry, and model diagnostics.
+1. **Workspace evidence.** Workspace identity uses project-relative paths. Trusted projects can contribute a manifest summary, README overview, landmarks, branch, and bounded in-project guidance from Pi's loaded context. Guidance outside the project root is excluded; metadata symlinks are not followed. Untrusted project files are not inspected. Source contents can themselves contain paths or sensitive material; this is not a general redactor.
+2. **Active-session evidence.** Visible user/assistant text and summaries are eligible, including materialized retained dialogue on newer compaction checkpoints. `auto` favors lexical references and preserves the user instruction behind a matching assistant reply. User turns get capacity before summaries or assistant commentary, with the newest relevant user turn first. Selected items remain chronological. Thinking, hidden entries, extension metadata, telemetry, and diagnostics stay excluded.
+3. **Opt-in tool evidence.** Existing paired results for `bash`, `read`, `grep`, `find`, `ls`, `edit`, and `write` in the last 64 entries can supply up to eight candidate excerpts, capped at 240 estimated tokens each. All start unchecked. The inspector permits at most three / 512 tokens, within the combined context budget. Unknown tools, arbitrary argument/detail objects, unpaired results, and recognizable credential-file targets are excluded. This is not exhaustive secret detection. Chisel never runs tools.
 
-`auto` no longer makes a binary “context needed” decision. Brief or explicitly referential drafts receive the expanded remaining session budget; developed drafts receive a smaller ambient slice, which keeps them session-aware without letting unrelated history dominate. `recent` uses the full remaining session budget, while `none` is the explicit draft-only opt-out.
+Explicitly referential drafts receive expanded conversation capacity; short self-contained drafts do not. `recent` removes the lexical relevance filter, not the user-priority policy. `none` disables workspace, session, and tool evidence entirely.
 
-Context items use explicit `[USER]`, `[ASSISTANT]`, `[SESSION_SUMMARY]`, and `[BRANCH_SUMMARY]` boundaries. A per-item cap prevents one long response from evicting the preceding request, and oversized items preserve both their beginning and end around an omission marker. `estimateTokens()` is exported from `dist/index.d.ts:5`; its implementation uses Pi’s conservative characters-per-token estimate. The exact draft, output allowance, request framing, and provider margin are reserved first, so grounding shrinks before the draft ever could.
+`src/evidence.ts` selects complete sentences/lines, favoring constraints and matching references. Truncation is marked; indivisible units can be omitted if they do not fit. Source IDs, roles, exact bounded text, and truncation flags remain available to the inspector. Lexical matching and English constraint cues are heuristics, not semantic guarantees. `estimateTokens()` is exported from `dist/index.d.ts:5`; its implementation uses Pi’s conservative characters-per-token estimate. The exact original, revision candidate/feedback, output allowance, request framing, and provider margin are reserved first, so grounding shrinks before user-controlled request text.
 
 ## Model registry, provider invocation, and transcript isolation
 
@@ -93,11 +94,21 @@ Pi Chisel uses the strongest public boundary available without modifying core:
 3. Resolve model-specific headers/environment with `getApiKeyAndHeaders(model)`.
 4. Resolve credential-specific base URL with `getProviderAuth(provider)` and project it onto a request-local model copy.
 5. Call `provider.streamSimple()` with a fresh side-channel session ID, `cacheRetention: "none"`, `maxRetries: 0`, a bounded output cap, the overlay AbortSignal, and temperature `0.2` for non-reasoning models to reduce gratuitous variation.
-6. Consume text deltas and validate the final stop reason, non-empty text, and—at standard or strong intensity—that the model did not return the draft unchanged.
+6. Consume text deltas and validate the final stop reason and non-empty text. Unchanged output is valid at every intensity and preserves the original bytes. Revisions supply the original, candidate, and explicit editing feedback as separate bounded sections.
 
 No method on `AgentSession`, `SessionManager`, or `ExtensionAPI` is used to send or append the optimizer request. As a result, neither request nor response enters the active branch, session JSONL, LLM context, transcript renderer, or usage footer.
 
 A small future core improvement would be a public `ctx.modelRegistry.streamSimple()` delegating to `ModelRuntime.streamSimple()`. That would centralize request preparation and extension request hooks. It is not required for the installed providers because the existing public provider and auth APIs expose the needed pieces.
+
+## Context inspection and revision state
+
+The default shortcut still generates immediately. `inspectContext: true` or `/prompt-optimize-context <draft>` opens preflight before any provider call; cancelling sends nothing. Review's **C** control opens the same inspector for the next pass, explicitly warning that it cannot unsend earlier requests. It previews the bounded source text used by request construction, sanitized only for terminal display. Inclusion is not verification or model attribution.
+
+`src/workflow.ts` freezes the source inventory for the invocation. Exclusions are never replenished and survive failures/history navigation. If a new model or longer revision reduces capacity, the remaining source selection requires approval before sending. Tool selection is explicit and cannot silently evict user intent to fit.
+
+Candidates keep their actual model, supplied sources, and feedback separately from next-pass selection. Retry collects feedback and retains the original as the intent anchor. Errors/cancellation return to the current candidate; **B** swaps with one previous candidate after a successful retry or manual edit. View/scroll state survives dialogs. Revision history, tool selections, exclusions, and feedback remain in memory only.
+
+Focused diff regions support next/previous-change navigation, while full original/rewrite views remain accessible. An unchanged draft displays **ALREADY GOOD** and acceptance is a no-op. Light cleans up, Standard clarifies and organizes, and Strong actively enriches rough ideas with relevant context and sensible supporting detail. All intensities preserve the underlying goal, request type, uncertainty, voice, literals, conditions, and explicit limits—not necessarily the original brevity or low detail. Focused investigation/verification can strengthen a repair; a question must not become implementation. See [editorial-quality.md](editorial-quality.md) for 25 synthetic contrasts and a human-review rubric; deterministic tests do not score live model quality.
 
 ## Independent model persistence
 
@@ -114,9 +125,9 @@ The model preference is either `null` for “follow current chat model” or `{ 
 3. It builds trusted workspace evidence plus a compaction-aware recent-session window. A fresh session still receives workspace grounding.
 4. Workspace evidence, session evidence, deterministic draft metadata, and the exact draft are placed in separate explicit boundaries under the optimizer instruction.
 5. A native cancellable **Pi Chisel at Work** overlay streams one provider request.
-6. A **Fresh off the Chisel** overlay names the model and grounding used, then offers use, tune, bounded changes, scrollable chiseled/original views, another pass, model selection, or keeping the original. Its copy explicitly states that using the result cannot submit.
+6. A **Fresh off the Chisel** overlay names the model and context supplied, then offers use, tune, focused changes/navigation, full views, context inspection, feedback-driven retry, model selection, previous candidate, or keeping the original. Its copy explicitly states that using the result cannot submit.
 7. Acceptance re-reads the editor. An exact match allows replacement; any mismatch forces replace/merge/cancel choice.
-8. A temporary confirmation overlay offers immediate restore. Restore rechecks the editor before writing.
+8. A temporary confirmation overlay offers immediate restore. Replacement/restore recheck the editor and invocation lifetime after asynchronous merge/conflict dialogs before writing.
 9. Submission remains the normal Pi editor action and is never synthesized by the extension.
 
 ## File responsibilities

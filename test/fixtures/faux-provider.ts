@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import type {
 	AssistantMessage,
 	Context,
@@ -7,6 +8,7 @@ import type {
 import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
+let optimizationCount = 0;
 const PROVIDER = "prompt-optimizer-faux";
 const MODEL = "faux-model";
 
@@ -49,6 +51,10 @@ function response(
 }
 
 export default function fauxProvider(pi: ExtensionAPI): void {
+	pi.on("session_start", async () => {
+		if (process.env.CHISEL_SMOKE_COUNTER)
+			writeFileSync(process.env.CHISEL_SMOKE_COUNTER, "0", { mode: 0o600 });
+	});
 	pi.registerProvider(PROVIDER, {
 		name: "Pi Chisel Faux Provider",
 		baseUrl: "https://example.invalid",
@@ -70,13 +76,41 @@ export default function fauxProvider(pi: ExtensionAPI): void {
 			const input = textFromLastUser(context);
 			const optimizing =
 				context.systemPrompt?.includes("Pi Chisel's prompt editor") ?? false;
+			if (optimizing) {
+				optimizationCount += 1;
+				if (process.env.CHISEL_SMOKE_COUNTER)
+					writeFileSync(
+						process.env.CHISEL_SMOKE_COUNTER,
+						String(optimizationCount),
+						{ mode: 0o600 },
+					);
+			}
 			const text = optimizing
-				? "Please make this clearer while preserving the exact intent."
+				? (process.env.PI_CHISEL_SMOKE_RESULT ??
+					"Please make this clearer while preserving the exact intent.")
 				: `MAIN RECEIVED: ${input}`;
 			const message = response(model, text);
-			const delay = optimizing && input.includes("slow original") ? 2000 : 120;
+			const delay =
+				optimizing &&
+				(input.includes("slow original") ||
+					input.includes("CHISEL_SMOKE_SLOW_RETRY"))
+					? 2000
+					: 120;
 			const timer = setTimeout(() => {
 				if (options?.signal?.aborted) return;
+				if (optimizing && input.includes("CHISEL_SMOKE_FAIL_RETRY")) {
+					stream.push({
+						type: "error",
+						reason: "error",
+						error: {
+							...message,
+							stopReason: "error",
+							errorMessage: "Synthetic retry failure",
+						},
+					});
+					stream.end();
+					return;
+				}
 				stream.push({ type: "start", partial: message });
 				stream.push({ type: "text_start", contentIndex: 0, partial: message });
 				stream.push({
