@@ -30,6 +30,12 @@ export default async function promptOptimizerExtension(
 		},
 	});
 
+	pi.registerCommand("prompt-optimize-context", {
+		description:
+			"Inspect context before sending a draft (usage: /prompt-optimize-context <draft>)",
+		handler: async (args, ctx) => controller.optimize(ctx, args || "", true),
+	});
+
 	pi.registerCommand("prompt-optimize-model", {
 		description: "Choose and persist Pi Chisel's independent model",
 		handler: async (_args, ctx) => controller.chooseModel(ctx),

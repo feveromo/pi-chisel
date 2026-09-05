@@ -5,8 +5,6 @@ from __future__ import annotations
 
 import atexit
 import fcntl
-import html
-import importlib
 import os
 import pty
 import re
@@ -20,7 +18,9 @@ import termios
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import NoReturn
+
+from terminal_capture import TerminalCapture
 
 ROOT = Path(__file__).resolve().parents[1]
 SUPPORTED_OMP = ROOT / "node_modules" / ".bin" / "omp"
@@ -57,25 +57,12 @@ optimized_draft = os.environ.get(
     "OMP_CHISEL_SMOKE_RESULT",
     "Please make this clearer while preserving the exact intent.",
 )
-capture_dir_value = os.environ.get("OMP_CHISEL_CAPTURE_DIR")
-capture_dir = Path(capture_dir_value) if capture_dir_value else None
-terminal_screen: Any | None = None
-terminal_stream: Any | None = None
-if capture_dir is not None:
-    try:
-        pyte = importlib.import_module("pyte")
-    except ImportError as error:
-        raise SystemExit(
-            "Screenshot capture requires pyte; run with `uv run --with pyte test/smoke-tui.py`"
-        ) from error
-    capture_dir.mkdir(parents=True, exist_ok=True)
-    terminal_screen = pyte.Screen(120, 42)
-    terminal_stream = pyte.Stream(terminal_screen)
+capture = TerminalCapture(os.environ.get("OMP_CHISEL_CAPTURE_DIR"), "OMP 17.2.11")
 
 configured_runtime = os.environ.get("OMP_CHISEL_CONFIGURED") == "1"
-config_dir = (
-    None if configured_runtime else tempfile.mkdtemp(prefix="pi-chisel-smoke-")
-)
+config_dir = None if configured_runtime else tempfile.mkdtemp(prefix="pi-chisel-smoke-")
+counter_dir = tempfile.mkdtemp(prefix="chisel-counter-")
+counter_path = Path(counter_dir) / "requests"
 master_fd, slave_fd = pty.openpty()
 fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, struct.pack("HHHH", 42, 120, 0, 0))
 
@@ -87,16 +74,24 @@ env.update(
         "OMP_SKIP_SETUP": "1",
         "TERM": "xterm-256color",
         "COLORTERM": "truecolor",
+        "CHISEL_SMOKE_COUNTER": str(counter_path),
     }
 )
 if config_dir is not None:
     env["PI_CODING_AGENT_DIR"] = config_dir
+    env["HOME"] = config_dir
+    for key in ("OMP_PROFILE", "PI_PROFILE", "PI_CONFIG_DIR"):
+        env.pop(key, None)
+    for key in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
+        env[key] = str(Path(config_dir) / key.lower())
 
 command = [
     OMP,
     "--no-session",
     "--no-rules",
     "--no-skills",
+    "--no-lsp",
+    "--no-title",
 ]
 if configured_runtime:
     command.extend(["-e", str(ROOT / "test/fixtures/faux-provider.ts")])
@@ -144,6 +139,7 @@ def cleanup() -> None:
                 process.wait(timeout=2)
     if config_dir is not None:
         shutil.rmtree(config_dir, ignore_errors=True)
+    shutil.rmtree(counter_dir, ignore_errors=True)
 
 
 atexit.register(cleanup)
@@ -164,8 +160,7 @@ def pump(duration: float = 0.1) -> None:
         if not chunk:
             break
         output.extend(chunk)
-        if terminal_stream is not None:
-            terminal_stream.feed(chunk.decode("utf-8", errors="replace"))
+        capture.feed(chunk)
         if len(output) > 1_000_000:
             del output[:-750_000]
 
@@ -193,176 +188,52 @@ def plain_tail() -> str:
     text = decoded()
     text = re.sub(r"\x1b\][^\x07]*(?:\x07|\x1b\\)", "", text)
     text = re.sub(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|[@-_])", "", text)
-    return text[-10_000:]
+    return text[:4_000] + "\n…\n" + text[-10_000:]
 
 
 def fail(message: str) -> NoReturn:
     raise AssertionError(f"{message}\n\n--- OMP output tail ---\n{plain_tail()}")
 
 
-def capture_svg(name: str, marker: str, footer: str) -> None:
-    if capture_dir is None or terminal_screen is None:
-        return
-    display = terminal_screen.display
-    marker_row = next(
-        (index for index, line in enumerate(display) if marker in line), None
-    )
-    if marker_row is None:
-        fail(f"Could not find screenshot marker {marker!r}")
-    footer_row = next(
-        (
-            index
-            for index in range(marker_row, min(len(display), marker_row + 28))
-            if footer in display[index]
-        ),
-        None,
-    )
-    if footer_row is None:
-        fail(f"Could not find screenshot footer {footer!r}")
-
-    first_row = max(0, marker_row - 1)
-    last_row = min(len(display) - 1, footer_row + 1)
-    first_column = 0
-    last_column = 119
-
-    cell_width = 8.8
-    line_height = 21
-    padding = 24
-    header_height = 42
-    columns = last_column - first_column + 1
-    rows = last_row - first_row + 1
-    width = round(columns * cell_width + padding * 2)
-    height = header_height + rows * line_height + padding
-    color_map = {
-        "black": "#11151d",
-        "red": "#ff6b7a",
-        "green": "#7bd88f",
-        "yellow": "#f4bf75",
-        "blue": "#79a8ff",
-        "magenta": "#c099ff",
-        "cyan": "#61d6d6",
-        "white": "#d8dee9",
-        "brightblack": "#667085",
-        "brightred": "#ff8290",
-        "brightgreen": "#91e6a3",
-        "brightyellow": "#ffd08a",
-        "brightblue": "#91b8ff",
-        "brightmagenta": "#d0b0ff",
-        "brightcyan": "#7fe3e3",
-        "brightwhite": "#f4f7fb",
-        "default": "#d8dee9",
-    }
-    title = {
-        "pi-chisel-invoking": "Pi Chisel · invoking",
-        "pi-chisel-review": "Pi Chisel · review",
-        "pi-chisel-comparison": "Pi Chisel · comparison",
-    }.get(name, "Pi Chisel")
-    svg = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
-        '<rect width="100%" height="100%" rx="14" fill="#0b0f14"/>',
-        '<rect x="0.5" y="0.5" width="calc(100% - 1px)" height="calc(100% - 1px)" rx="13.5" fill="none" stroke="#273142"/>',
-        '<circle cx="20" cy="21" r="5" fill="#ff6b7a"/>',
-        '<circle cx="38" cy="21" r="5" fill="#f4bf75"/>',
-        '<circle cx="56" cy="21" r="5" fill="#7bd88f"/>',
-        f'<text x="{width / 2:.1f}" y="26" text-anchor="middle" fill="#7f8da3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">{html.escape(title)}</text>',
-        '<line x1="0" y1="42" x2="100%" y2="42" stroke="#202938"/>',
-    ]
-    for output_row, source_row in enumerate(range(first_row, last_row + 1)):
-        y = header_height + padding / 2 + (output_row + 1) * line_height - 5
-        current_color = None
-        current_bold = False
-        current_text = ""
-        segment_start = 0
-        row_buffer = terminal_screen.buffer[source_row]
-        row_text = display[source_row].strip()
-        row_override = None
-        if any(
-            label in row_text
-            for label in ("Pi Chisel at Work", "Fresh off the Chisel", "CHISELED", "CHANGES")
-        ):
-            row_override = "#c099ff"
-        elif row_text.startswith(("│  --- original", "│  - ")):
-            row_override = "#ff8290"
-        elif row_text.startswith(("│  +++ chiseled", "│  + ")):
-            row_override = "#91e6a3"
-        elif any(
-            label in row_text
-            for label in (
-                "Model:",
-                "Grounded in:",
-                "Still unsent",
-                "enter use this",
-                "another pass",
-                "keep original",
-            )
-        ):
-            row_override = "#8b98ad"
-        row_last_nonspace = max(
-            (
-                column
-                for column in range(first_column, last_column + 1)
-                if row_buffer[column].data != " "
-            ),
-            default=first_column,
-        )
-        for output_column, source_column in enumerate(
-            range(first_column, last_column + 1)
-        ):
-            character = row_buffer[source_column]
-            character_data = (
-                " "
-                if character.data == "│" and source_column == row_last_nonspace
-                else character.data
-            )
-            color = character.fg
-            if row_override is not None:
-                shown_color = row_override
-            elif isinstance(color, str) and color.startswith("#"):
-                shown_color = color
-            else:
-                shown_color = color_map.get(str(color), color_map["default"])
-            bold = bool(character.bold)
-            if current_color is None:
-                current_color = shown_color
-                current_bold = bold
-                segment_start = output_column
-            if shown_color != current_color or bold != current_bold:
-                if current_text.strip():
-                    x = padding + segment_start * cell_width
-                    weight = ' font-weight="700"' if current_bold else ""
-                    svg.append(
-                        f'<text x="{x:.1f}" y="{y:.1f}" fill="{current_color}"{weight} '
-                        'font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" '
-                        f'font-size="14">{html.escape(current_text)}</text>'
-                    )
-                current_color = shown_color
-                current_bold = bold
-                current_text = ""
-                segment_start = output_column
-            current_text += character_data
-        if current_text.strip():
-            x = padding + segment_start * cell_width
-            weight = ' font-weight="700"' if current_bold else ""
-            svg.append(
-                f'<text x="{x:.1f}" y="{y:.1f}" fill="{current_color}"{weight} '
-                'font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" '
-                f'font-size="14">{html.escape(current_text)}</text>'
-            )
-    svg.append("</svg>\n")
-    (capture_dir / f"{name}.svg").write_text("\n".join(svg), encoding="utf-8")
+def request_count() -> int:
+    try:
+        return int(counter_path.read_text() or "0")
+    except (FileNotFoundError, ValueError):
+        return 0
 
 
-# Let OMP finish extension/provider initialization and focus the editor.
-pump(1.2)
-if process.poll() is not None:
-    fail("OMP failed during startup")
+def wait_requests(count: int) -> None:
+    deadline = time.monotonic() + 8
+    while request_count() < count:
+        if time.monotonic() >= deadline:
+            fail(f"Expected {count} optimizer requests, saw {request_count()}")
+        pump(0.1)
+
+
+# Wait for session_start after the TUI/input handlers initialize, not a cold-start guess.
+deadline = time.monotonic() + 20
+while not counter_path.exists():
+    if process.poll() is not None or time.monotonic() >= deadline:
+        fail("OMP did not initialize its interactive extension context")
+    pump(0.1)
+pump(0.2)
+
+# Preflight is a real transmission boundary, not a post-hoc privacy claim.
+send(b"/prompt-optimize-context inspect this draft")
+send(b"\r")
+wait_for("Before Chisel sends")
+if request_count() != 0:
+    fail("Initial context inspection sent a provider request")
+capture.save("pi-chisel-context", "Before Chisel sends", "esc back")
+send(b"\x1b")
+send(b"\x03")
 
 # Escape must cancel an active request and preserve the original editor draft.
 send(b"slow original")
 send(kitty_shortcut(shortcut))
 wait_for("Pi Chisel at Work")
 wait_for("Shaping a sharper prompt")
-capture_svg("pi-chisel-invoking", "Pi Chisel at Work", "esc keep original")
+capture.save("pi-chisel-invoking", "Pi Chisel at Work", "esc keep original")
 send(b"\x1b")
 pump(0.5)
 if "Fresh off the Chisel" in decoded():
@@ -375,10 +246,16 @@ send(b"\x03")  # Ctrl+C clears the editor
 send(demo_draft.encode())
 send(kitty_shortcut(shortcut, alternate=True))
 wait_for("Fresh off the Chisel")
+# Configured users can open on any review view. Navigate explicitly without
+# changing their saved preferences: changes -> original -> rewrite.
+send(b"d")
+wait_for("CHANGES")
+send(b"\t")
+wait_for("ORIGINAL")
+send(b"\t")
 wait_for("CHISELED")
 wait_for(optimized_draft[:48])
-wait_for("Grounded in: workspace")
-wait_for("fresh session")
+wait_for("Context supplied: workspace")
 wait_for("Still unsent")
 wait_for("nothing gets submitted")
 wait_for("use this")
@@ -386,14 +263,46 @@ wait_for("tune it")
 wait_for("another pass")
 wait_for("switch model")
 wait_for("keep original")
-capture_svg("pi-chisel-review", "Fresh off the Chisel", "keep original")
+capture.save("pi-chisel-review", "Fresh off the Chisel", "keep original")
 send(b"\t")
 wait_for("CHANGES")
 wait_for("--- original")
 wait_for("+++ chiseled")
-capture_svg("pi-chisel-comparison", "Fresh off the Chisel", "keep original")
+capture.save("pi-chisel-comparison", "Fresh off the Chisel", "keep original")
 send(b"\t")
 wait_for("ORIGINAL")
+
+# Context exclusion regenerates; feedback and failed/cancelled retries keep a candidate.
+send(b"c")
+wait_for("Context supplied")
+if request_count() != 2:
+    fail("Opening the review inspector sent a request")
+send(b"0")
+send(b"\r")
+wait_requests(3)
+wait_for("previous candidate")
+pump(0.3)
+send(b"r")
+wait_for("what should change?")
+send(b"Keep it casual.")
+send(b"\x1b[13;5u")  # OMP's multiline editor submits with Ctrl+Enter.
+wait_requests(4)
+pump(0.4)
+send(b"r")
+send(b"CHISEL_SMOKE_FAIL_RETRY")
+send(b"\x1b[13;5u")
+wait_requests(5)
+wait_for("Synthetic retry failure")
+send(b"r")
+send(b"CHISEL_SMOKE_SLOW_RETRY")
+send(b"\x1b[13;5u")
+wait_requests(6)
+send(b"\x1b")
+wait_for("Pass cancelled")
+send(b"b")  # Return to the earlier candidate, without another provider request.
+pump(0.2)
+if request_count() != 6:
+    fail("Candidate history navigation sent a request")
 send(b"\r")  # Use the chiseled draft; this must not submit.
 wait_for("Chiseled draft ready")
 wait_for("Still unsent. Submit normally when it looks right.")
@@ -422,5 +331,6 @@ if process.returncode != 0:
 runtime_label = "configured package" if configured_runtime else "isolated extension"
 print(
     f"OMP TUI smoke test passed ({runtime_label}, {shortcut}): Escape cancellation, "
-    "chiseled/changes/original review, replacement, and explicit submission."
+    "preflight without transmission, context exclusion, steerable retry, failure/cancel recovery, "
+    "candidate history, review, replacement, and explicit submission."
 )

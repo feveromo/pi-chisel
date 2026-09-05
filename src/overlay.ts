@@ -8,6 +8,11 @@ import {
 	modelReference,
 	type ResolvedOptimizerModel,
 } from "./model-selection.ts";
+import type { ContextSource } from "./request-builder.ts";
+import {
+	ContextInspector,
+	type ContextInspectorOptions,
+} from "./ui/context.ts";
 import {
 	type ChoiceOption,
 	type ModelPickerResult,
@@ -18,6 +23,7 @@ import {
 	type ReviewAction,
 	type SettingsResult,
 } from "./ui/index.ts";
+import type { ReviewPosition } from "./ui/review.ts";
 
 export interface InvocationHandle {
 	id: number;
@@ -94,6 +100,9 @@ export async function showReview(
 	resolved: ResolvedOptimizerModel,
 	contextSummary: string,
 	config: OptimizerConfig,
+	hasPrevious = false,
+	position?: ReviewPosition,
+	warning?: string,
 ): Promise<ReviewAction> {
 	try {
 		return await ctx.ui.custom<ReviewAction>(
@@ -111,9 +120,31 @@ export async function showReview(
 					initialView: config.previewMode,
 					modelRef: modelReference(resolved.model),
 					contextSummary,
-					...(resolved.warning ? { warning: resolved.warning } : {}),
+					...(warning || resolved.warning
+						? { warning: warning || resolved.warning || "" }
+						: {}),
+					hasPrevious,
+					...(position ? { position } : {}),
 					onAction: finish,
 				});
+			},
+			PROMPT_OVERLAY,
+		);
+	} finally {
+		invocation.dismiss = undefined;
+	}
+}
+
+export async function showContextInspector(
+	ctx: ExtensionContext,
+	invocation: InvocationHandle,
+	options: Omit<ContextInspectorOptions, "onDone">,
+): Promise<ContextSource[] | undefined> {
+	try {
+		return await ctx.ui.custom<ContextSource[] | undefined>(
+			(tui, theme, _keys, done) => {
+				invocation.dismiss = () => done(undefined);
+				return new ContextInspector(tui, theme, { ...options, onDone: done });
 			},
 			PROMPT_OVERLAY,
 		);

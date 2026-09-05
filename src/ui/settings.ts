@@ -46,6 +46,14 @@ export class OptimizerSettingsComponent extends Container {
 				values: ["auto", "recent", "none"],
 			},
 			{
+				id: "inspectContext",
+				label: "Inspect before sending",
+				description:
+					"Review exact sources before every request; tool excerpts always require explicit selection",
+				currentValue: config.inspectContext ? "on" : "off",
+				values: ["off", "on"],
+			},
+			{
 				id: "contextTokenBudget",
 				label: "Context token budget",
 				description:
@@ -56,16 +64,17 @@ export class OptimizerSettingsComponent extends Container {
 			{
 				id: "intensity",
 				label: "Editing intensity",
-				description: "How boldly Chisel may reshape the draft",
+				description:
+					"light cleans up; standard clarifies; strong builds out rough ideas with useful detail",
 				currentValue: config.intensity,
 				values: ["light", "standard", "strong"],
 			},
 			{
 				id: "previewMode",
 				label: "Review opens on",
-				description: "The review can always toggle between both versions",
+				description: "Start on the rewrite, original, or focused changes",
 				currentValue: config.previewMode,
-				values: ["optimized", "original"],
+				values: ["optimized", "diff", "original"],
 			},
 		];
 
@@ -92,6 +101,8 @@ export class OptimizerSettingsComponent extends Container {
 			(id, value) => {
 				if (id === "contextMode")
 					this.working.contextMode = value as OptimizerConfig["contextMode"];
+				else if (id === "inspectContext")
+					this.working.inspectContext = value === "on";
 				else if (id === "contextTokenBudget")
 					this.working.contextTokenBudget = Number(value);
 				else if (id === "intensity")

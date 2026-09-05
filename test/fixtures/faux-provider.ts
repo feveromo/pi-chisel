@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import {
 	type Api,
 	type AssistantMessage,
@@ -9,6 +10,7 @@ import {
 } from "@oh-my-pi/pi-ai";
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 
+let optimizationCount = 0;
 const PROVIDER = "prompt-optimizer-faux";
 const MODEL = "faux-model";
 const API = "prompt-optimizer-faux-api";
@@ -62,14 +64,41 @@ function streamFaux(
 		context.systemPrompt?.some((prompt) =>
 			prompt.includes("Pi Chisel's prompt editor"),
 		) ?? false;
+	if (optimizing) {
+		optimizationCount += 1;
+		if (process.env.CHISEL_SMOKE_COUNTER)
+			writeFileSync(
+				process.env.CHISEL_SMOKE_COUNTER,
+				String(optimizationCount),
+				{ mode: 0o600 },
+			);
+	}
 	const text = optimizing
 		? (process.env.OMP_CHISEL_SMOKE_RESULT ??
 			"Please make this clearer while preserving the exact intent.")
 		: `MAIN RECEIVED: ${input}`;
 	const message = response(model, text);
-	const delay = optimizing && input.includes("slow original") ? 2000 : 120;
+	const delay =
+		optimizing &&
+		(input.includes("slow original") ||
+			input.includes("CHISEL_SMOKE_SLOW_RETRY"))
+			? 2000
+			: 120;
 	const timer = setTimeout(() => {
 		if (options?.signal?.aborted) return;
+		if (optimizing && input.includes("CHISEL_SMOKE_FAIL_RETRY")) {
+			stream.push({
+				type: "error",
+				reason: "error",
+				error: {
+					...message,
+					stopReason: "error",
+					errorMessage: "Synthetic retry failure",
+				},
+			});
+			stream.end();
+			return;
+		}
 		stream.push({ type: "start", partial: message });
 		stream.push({ type: "text_start", contentIndex: 0, partial: message });
 		stream.push({
@@ -103,6 +132,10 @@ function streamFaux(
 }
 
 export default function fauxProvider(pi: ExtensionAPI): void {
+	pi.on("session_start", async () => {
+		if (process.env.CHISEL_SMOKE_COUNTER)
+			writeFileSync(process.env.CHISEL_SMOKE_COUNTER, "0", { mode: 0o600 });
+	});
 	// OMP's source-loaded extension graph and bundled host keep separate custom
 	// API registries. Register in both so Chisel and the main session see the
 	// same deterministic provider during this PTY smoke.

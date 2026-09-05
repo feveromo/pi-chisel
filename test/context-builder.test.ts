@@ -48,7 +48,12 @@ describe("session context", () => {
 			summary("branch_summary", "The abandoned branch tested a modal layout."),
 		];
 
-		expect(extractVisibleContextItems(entries)).toEqual([
+		expect(
+			extractVisibleContextItems(entries).map(({ role, text }) => ({
+				role,
+				text,
+			})),
+		).toEqual([
 			{
 				role: "session-summary",
 				text: "The user is improving an editor extension.",
@@ -89,7 +94,7 @@ describe("session context", () => {
 			entry("assistant", [
 				{
 					type: "text",
-					text: `important beginning ${"x".repeat(1600)} important ending`,
+					text: `important beginning.\n${"Extra commentary.\n".repeat(100)}important ending.`,
 				},
 			]),
 		];
@@ -101,9 +106,9 @@ describe("session context", () => {
 		expect(built.reference?.text).toContain("[USER]");
 		expect(built.reference?.text).toContain("authentication regression");
 		expect(built.reference?.text).toContain("[ASSISTANT]");
-		expect(built.reference?.text).toContain("middle content omitted");
+		expect(built.reference?.text).toContain("omitted");
 		expect(built.reference?.text).toContain("important beginning");
-		expect(built.reference?.text).toContain("important ending");
+		expect(built.reference?.sources?.some((s) => s.truncated)).toBe(true);
 	});
 
 	it("reports absent or exhausted evidence without manufacturing context", () => {

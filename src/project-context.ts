@@ -7,7 +7,10 @@ import {
 	relative,
 	resolve,
 } from "node:path";
+import { analyzeDraft } from "./draft-analysis.ts";
+import { excerpt, referenceTerms, relevance } from "./evidence.ts";
 import {
+	type ContextSource,
 	estimateTextTokens,
 	type WorkspaceReference,
 } from "./request-builder.ts";
@@ -22,6 +25,7 @@ export interface BuildWorkspaceReferenceOptions {
 	systemPrompt: string;
 	trusted: boolean;
 	tokenBudget: number;
+	draft?: string;
 }
 
 const PROJECT_MARKERS = [
@@ -282,20 +286,7 @@ function fitTextToTokenBudget(
 	text: string,
 	tokenBudget: number,
 ): string | undefined {
-	if (tokenBudget <= 0) return undefined;
-	if (estimateTextTokens(text) <= tokenBudget) return text;
-
-	const marker = "\n[… context excerpt shortened …]\n";
-	if (estimateTextTokens(marker) >= tokenBudget) return undefined;
-	let characterBudget = Math.max(1, tokenBudget * 4 - marker.length);
-	while (characterBudget > 0) {
-		const headCharacters = Math.max(1, Math.floor(characterBudget * 0.7));
-		const tailCharacters = Math.max(1, characterBudget - headCharacters);
-		const candidate = `${text.slice(0, headCharacters)}${marker}${text.slice(-tailCharacters)}`;
-		if (estimateTextTokens(candidate) <= tokenBudget) return candidate;
-		characterBudget -= Math.max(1, Math.ceil(characterBudget * 0.08));
-	}
-	return undefined;
+	return excerpt(text, tokenBudget, "", true)?.text;
 }
 
 interface ReferenceSection {
@@ -353,11 +344,20 @@ export async function buildWorkspaceReference(
 		},
 	];
 
-	const selected: string[] = [];
-	let sourceCount = 0;
-	for (const section of sections) {
+	const selected: ContextSource[] = [];
+	const terms = referenceTerms(options.draft ?? "");
+	for (const [index, section] of sections.entries()) {
 		if (!section.text) continue;
-		const used = estimateTextTokens(selected.join("\n\n"));
+		if (
+			index > 0 &&
+			options.draft &&
+			!analyzeDraft(options.draft).likelyReferential &&
+			!relevance(section.text, terms)
+		)
+			continue;
+		const used =
+			estimateTextTokens(selected.map((s) => s.text).join("\n\n")) +
+			(selected.length ? 1 : 0);
 		const remaining = tokenBudget - used;
 		if (remaining <= 0) break;
 		const fitted = fitTextToTokenBudget(
@@ -365,17 +365,23 @@ export async function buildWorkspaceReference(
 			Math.min(remaining, section.maximumTokens),
 		);
 		if (!fitted) continue;
-		selected.push(fitted);
-		sourceCount += 1;
+		selected.push({
+			id: `workspace:${index}`,
+			kind: "workspace",
+			label: section.text.split("\n")[0] ?? "Workspace",
+			text: fitted,
+			truncated: fitted !== section.text,
+			trusted,
+		});
 	}
 	if (selected.length === 0) return undefined;
 
-	const text = fitTextToTokenBudget(selected.join("\n\n"), tokenBudget);
-	if (!text) return undefined;
+	const text = selected.map((s) => s.text).join("\n\n");
 	return {
 		text,
+		sources: selected,
 		estimatedTokens: estimateTextTokens(text),
-		sourceCount,
+		sourceCount: selected.length,
 		trusted,
 	};
 }

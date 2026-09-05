@@ -31,7 +31,8 @@ describe("optimizer config", () => {
 			contextTokenBudget: 4096,
 			intensity: "strong",
 			shortcut: "CTRL+SHIFT+K",
-			previewMode: "original",
+			previewMode: "diff",
+			inspectContext: true,
 		});
 
 		expect(parsed.warning).toBeUndefined();
@@ -41,12 +42,14 @@ describe("optimizer config", () => {
 			contextTokenBudget: 4096,
 			intensity: "strong",
 			shortcut: "ctrl+shift+k",
-			previewMode: "original",
+			previewMode: "diff",
+			inspectContext: true,
 		});
 
 		const invalid = parseOptimizerConfig({
 			contextTokenBudget: -1,
 			shortcut: "ctrl+made-up",
+			inspectContext: "yes",
 		});
 		expect(invalid.config.contextTokenBudget).toBe(
 			DEFAULT_OPTIMIZER_CONFIG.contextTokenBudget,
@@ -54,6 +57,8 @@ describe("optimizer config", () => {
 		expect(invalid.config.shortcut).toBe("ctrl+shift+k");
 		expect(invalid.warning).toContain("contextTokenBudget");
 		expect(invalid.warning).toContain("shortcut");
+		expect(invalid.warning).toContain("inspectContext");
+		expect(invalid.config.inspectContext).toBe(false);
 	});
 
 	it("normalizes OMP key names and modifier order for conflict checks", () => {
@@ -78,7 +83,11 @@ describe("optimizer config", () => {
 		temporaryDirectories.push(directory);
 		const path = join(directory, "nested", "prompt-optimizer.json");
 		const store = new OptimizerConfigStore(path);
-		const config = { ...DEFAULT_OPTIMIZER_CONFIG, intensity: "light" as const };
+		const config = {
+			...DEFAULT_OPTIMIZER_CONFIG,
+			intensity: "light" as const,
+			inspectContext: true,
+		};
 
 		await store.save(config);
 
