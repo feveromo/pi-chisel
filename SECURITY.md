@@ -12,4 +12,8 @@ Include the affected version, impact, reproduction steps, and any suggested miti
 
 ## Data boundary
 
-Chisel sends the unsent draft and, unless context mode is `none`, bounded workspace and session evidence to the selected model provider. It does not persist that request or add it to OMP's session transcript. See [Privacy and data handling](README.md#privacy-and-data-handling) for the complete user-facing behavior.
+Chisel sends the unsent draft and, unless context mode is `none`, selected bounded workspace/session evidence to the chosen model provider. Tool excerpts require explicit selection; they are never enabled by a persistent setting. Revisions also send the current candidate and user editing feedback. None of this request/revision data is persisted by Chisel or added to either host's session transcript.
+
+Use pre-send inspection (`inspectContext` or `/prompt-optimize-context`) to review/exclude evidence before the first transmission. Review-time exclusions apply only to subsequent requests and cannot undo earlier disclosure. The tool allowlist and credential-target filter are not exhaustive secret detection; inspect any selected excerpts. Source inclusion is not verification, and untrusted evidence is never authorized to control the optimizer or execute tools.
+
+See [Privacy and safety](README.md#privacy-and-safety) and [context inspection](README.md#inspect-context-and-select-tool-evidence) for provider retention, opt-in, and UI behavior.

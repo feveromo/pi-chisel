@@ -52,10 +52,11 @@
 		"check": "tsc --noEmit",
 		"test": "bun test",
 		"test:smoke": "python3 test/smoke-tui.py",
+		"test:capture": "python3 -m unittest discover -s test -p 'test_*.py'",
 		"smoke:install": "bash test/smoke-install.sh",
 		"smoke:configured": "bash test/smoke-configured.sh",
 		"audit:prod": "npm audit --omit=dev --ignore-scripts",
 		"pack:check": "npm pack --dry-run --ignore-scripts",
-		"validate": "npm run lint && npm run check && npm test && npm run audit:prod && npm run pack:check && npm run test:smoke && npm run smoke:install"
+		"validate": "npm run lint && npm run check && npm test && npm run test:capture && npm run audit:prod && npm run pack:check && npm run test:smoke && npm run smoke:install"
 	}
 }

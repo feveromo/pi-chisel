@@ -13,7 +13,7 @@ OMP packages declare extension entry points in the `omp.extensions` package mani
 Chisel's factory in `src/index.ts` performs only bounded setup:
 
 - Load and validate the local optimizer configuration.
-- Register one shortcut and four slash commands.
+- Register one shortcut and five slash commands, including an explicit pre-send inspector entry point.
 - Construct one controller that owns invocation and replacement state.
 - Dispose that controller on `session_shutdown`.
 
@@ -45,11 +45,12 @@ The OMP context exposes `cwd`, `getSystemPrompt()`, and a read-only `sessionMana
 Grounding has two independently bounded layers:
 
 1. **Workspace evidence.** `src/project-context.ts` finds a project root from the active working directory and collects a small manifest summary, README excerpt, top-level landmarks, branch name, and explicit in-project guidance blocks already present in OMP's system prompt. The generated identity uses project-relative paths, and guidance files outside the detected project root are excluded. OMP 17.2.11 does not expose the former Pi project-trust predicate, so context mode `none` is the hard opt-out for workspace inspection and transmission.
-2. **Active-branch evidence.** `sessionManager.getBranch()` supplies the current branch. `src/context-builder.ts` retains visible user and assistant text plus compaction and branch summaries, while excluding thinking, tool traffic, hidden custom entries, and extension diagnostics.
+2. **Active-branch evidence.** `sessionManager.getBranch()` supplies the current branch. `src/context-builder.ts` retains visible user and assistant text plus compaction and branch summaries (including materialized retained dialogue when present). `auto` matches draft terms/references and retains the user instruction behind a matching assistant reply. User sources are allocated first, with the newest relevant user turn ahead of older turns; assistant commentary cannot evict them. `recent` removes the relevance filter, not the user priority. Brevity alone no longer expands the conversation budget.
+3. **Explicit tool excerpts.** Only paired completed results for a small built-in-tool allowlist in the last 64 entries are considered. At most eight candidates are offered, each capped at 240 estimated tokens; none are initially selected. The inspector allows at most three results / 512 tokens total, still inside the existing context budget. No tools are exposed to the optimizer. Unknown tools, hidden entries, arbitrary arguments/details, and recognizable credential-file targets remain excluded. This is not exhaustive secret detection.
 
-Every evidence section is labeled untrusted. Oversized entries keep bounded prefixes and suffixes around an omission marker. Per-item caps prevent one long response from evicting the preceding request.
+`src/evidence.ts` selects whole sentences/lines, prioritizing constraint-bearing units and matching references. Omission markers are explicit; indivisible units that do not fit can be omitted instead of silently splicing away a negation. Source IDs, kinds, labels, exact bounded text, and truncation flags survive into review. Lexical matching and English constraint cues are heuristics, not semantic guarantees.
 
-`estimateTokens()` comes from `@oh-my-pi/pi-agent-core/compaction`. The exact draft, output allowance, request framing, and provider margin are reserved before workspace or session evidence. Evidence shrinks first; the draft is never truncated. Models with missing context metadata use bounded conservative defaults.
+`estimateTextTokens()` uses an approximate UTF-8-bytes/4 estimate in this checkout. The exact original, revision candidate/feedback, output allowance, request framing, and provider margin are reserved first. Whole sources are removed before any user-controlled request text is truncated. Models with missing context metadata retain bounded defaults.
 
 ## Model selection and provider invocation
 
@@ -61,12 +62,22 @@ Every evidence section is labeled untrusted. Oversized entries keep bounded pref
 2. Apply OMP's current provider-specific base URL and headers.
 3. Obtain an OMP `ApiKeyResolver` with `modelRegistry.resolver(model, sessionId)`.
 4. Build a `Context` containing the optimizer system instruction and one user message with explicit evidence and draft boundaries.
-5. Call `streamSimple()` with a fresh UUID session ID, `cacheRetention: "none"`, an abort signal, and the computed output limit.
-6. Consume text events until the terminal assistant message, then reject empty, unchanged, malformed, truncated, or errored output.
+5. Call `streamSimple()` with a fresh UUID session ID, `cacheRetention: "none"`, an abort signal, and the computed output limit. Revisions contain the original, candidate, and explicit editing feedback as separate sections.
+6. Consume text events until the terminal assistant message, then reject empty, malformed, truncated, or errored output. At every intensity an unchanged response is a successful no-op, preserving the exact original bytes.
 
 This path does not call the main agent loop, append session entries, expose tools, or mutate the active model. OMP owns credential refresh and provider dispatch. Chisel only receives the resolved stream events.
 
 OMP's source-loaded extension graph and bundled host currently keep separate custom-API registries. Production providers are built into OMP and are unaffected. The PTY faux-provider fixture explicitly registers its deterministic stream in both registries so the isolated and configured smoke paths exercise the same Chisel boundary.
+
+## Review, inspection, and revision state
+
+The default shortcut generates immediately. `inspectContext: true` or `/prompt-optimize-context <draft>` opens `src/ui/context.ts` before any provider call. The inspector previews the same bounded source text used by request construction (terminal-sanitized for display), and names the provider/model. Escape from initial preflight sends nothing. Review's **C** control edits the next request and explicitly warns that previous requests cannot be unsent.
+
+`src/workflow.ts` freezes the eligible context inventory for one invocation. Source exclusions are not replenished and survive a failed retry or candidate-history navigation. A reduced model/revision budget requires inspection before transmission; it never silently changes approved excerpts. Tools require explicit selection and cannot displace user intent to make room. Source inclusion does not establish factual correctness or model attribution.
+
+The review offers focused diff regions with next/previous navigation, full original/rewrite views, context inspection, feedback-driven retry, manual editing, model switching, and one previous candidate. View and scroll state persist across dialogs. A candidate stores its text, actual model, supplied sources, and feedback independently of the next request's source selection. Errors/cancellation retain the previous candidate and its provenance. All revision/context state is in memory, not settings or transcript entries.
+
+The instruction treats context as evidence, not permission for a different goal. Light cleans up, Standard clarifies and organizes, and Strong actively enriches rough ideas with relevant context and supporting detail (such as focused investigation or verification for a repair). All intensities preserve request type, uncertainty, voice, literals, conditions, and explicit limits. Strong need not preserve the original brevity or low detail; narrow requests and explicit length limits still win. See [editorial-quality.md](editorial-quality.md) for synthetic contrasts and the human-review rubric; transport tests are not model-quality scores.
 
 ## Configuration
 
@@ -90,6 +101,7 @@ The workflow captures the draft before generation and treats that value as the c
 4. If it changed, require an explicit replace, merge-editor, or cancel decision.
 5. Record the exact before/after pair after a successful replacement.
 6. Recheck the after value before restore; never overwrite later edits silently.
+7. After asynchronous conflict/merge dialogs, recheck the editor and invocation lifetime again before writing.
 
 `src/editor-safety.ts` holds the pure decision rule, `src/replacement.ts` applies it through OMP's UI context, and `src/workflow.ts` owns the interactive sequence.
 

@@ -38,7 +38,7 @@ describe("prompt review", () => {
 
 		expect(output).toContain("Fresh off the Chisel");
 		expect(output).toContain("Model: test/model");
-		expect(output).toContain("Grounded in: workspace + fresh session");
+		expect(output).toContain("Context supplied: workspace + fresh session");
 		expect(output).toContain("Still unsent · Enter replaces your draft");
 		expect(output).toContain("nothing gets submitted");
 		expect(output).toContain("CHISELED");
@@ -69,6 +69,25 @@ describe("prompt review", () => {
 		component.handleInput("\r");
 		expect(onAction).toHaveBeenCalledWith("accept");
 		expect(requestRender).toHaveBeenCalled();
+	});
+
+	it("focuses distant changes, navigates both directions, and exposes context/previous actions", () => {
+		const middle = "Unchanged context. ".repeat(40);
+		const { component, onAction } = createReview(
+			`Old first. ${middle} Old last.`,
+			`New first. ${middle} New last.`,
+		);
+		component.handleInput("d");
+		expect(rendered(component, 82)).toContain("Change 1/2");
+		expect(rendered(component, 82)).not.toContain(
+			"Unchanged context. ".repeat(10),
+		);
+		component.handleInput("n");
+		expect(rendered(component, 82)).toContain("Change 2/2");
+		component.handleInput("p");
+		expect(rendered(component, 82)).toContain("Change 1/2");
+		component.handleInput("c");
+		expect(onAction).toHaveBeenCalledWith("context");
 	});
 
 	it("exposes and scrolls every row of a long review", () => {

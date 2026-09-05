@@ -156,6 +156,26 @@ describe("prompt optimizer model client", () => {
 		expect(test.getOptions()?.reasoning).toBe("low" as Effort);
 	});
 
+	it("reserves the larger estimated output for multilingual revision candidates", async () => {
+		const test = harness(assistant("A clearer prompt"));
+		const draft = "a".repeat(3000);
+		const candidate = "日".repeat(2400);
+		await runPromptOptimization({
+			model: TEST_MODEL,
+			modelRegistry: test.registry,
+			draft,
+			revision: { candidate, feedback: "Keep it brief." },
+			intensity: "standard",
+			signal: new AbortController().signal,
+		});
+		expect(test.getOptions()?.maxTokens).toBe(
+			Math.max(
+				calculateMaxOutputTokens(draft, TEST_MODEL.maxTokens),
+				calculateMaxOutputTokens(candidate, TEST_MODEL.maxTokens),
+			),
+		);
+	});
+
 	it("never starts a provider request after cancellation", async () => {
 		const test = harness(assistant("unused"));
 		const controller = new AbortController();
@@ -199,7 +219,7 @@ describe("prompt optimizer model client", () => {
 		expect(test.providerStream).not.toHaveBeenCalled();
 	});
 
-	it("rejects empty, unchanged, or truncated output instead of replacing the draft", async () => {
+	it("rejects empty or truncated output but accepts an already-good draft", async () => {
 		await expect(
 			runPromptOptimization({
 				model: TEST_MODEL,
@@ -210,15 +230,16 @@ describe("prompt optimizer model client", () => {
 			}),
 		).rejects.toBeInstanceOf(PromptOptimizationError);
 
-		await expect(
-			runPromptOptimization({
-				model: TEST_MODEL,
-				modelRegistry: harness(assistant("draft")).registry,
-				draft: "draft",
-				intensity: "standard",
-				signal: new AbortController().signal,
-			}),
-		).rejects.toThrow("unchanged");
+		for (const intensity of ["light", "standard", "strong"] as const)
+			await expect(
+				runPromptOptimization({
+					model: TEST_MODEL,
+					modelRegistry: harness(assistant("draft")).registry,
+					draft: "\n  draft\n\n",
+					intensity,
+					signal: new AbortController().signal,
+				}),
+			).resolves.toBe("\n  draft\n\n");
 
 		await expect(
 			runPromptOptimization({
@@ -229,16 +250,6 @@ describe("prompt optimizer model client", () => {
 				signal: new AbortController().signal,
 			}),
 		).rejects.toThrow("output limit");
-
-		await expect(
-			runPromptOptimization({
-				model: TEST_MODEL,
-				modelRegistry: harness(assistant("draft")).registry,
-				draft: "draft",
-				intensity: "light",
-				signal: new AbortController().signal,
-			}),
-		).resolves.toBe("draft");
 	});
 
 	it("runs with bounded defaults when OMP lacks model token metadata", async () => {
