@@ -42,6 +42,6 @@ if [[ "$configured_entry" != "$working_entry" ]]; then
 	exit 1
 fi
 
-printf 'Configured OMP plugin resolves prompt-optimize from %s\n' "$working_entry"
+printf 'Configured OMP plugin resolves /chisel from %s\n' "$working_entry"
 OMP_CHISEL_CONFIGURED=1 OMP_CHISEL_SMOKE_SHORTCUT="$shortcut" OMP_BIN="$omp_bin" \
 	python3 "$root/test/smoke-tui.py"
