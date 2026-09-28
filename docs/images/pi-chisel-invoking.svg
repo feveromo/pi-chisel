@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="801" height="296" viewBox="0 0 801 296" role="img">
-<title>invoking / Pi 0.85.0</title>
+<title>invoking / Pi 0.87.1</title>
 <rect x="0.5" y="0.5" width="800" height="295" rx="12" fill="#0b0f14" stroke="#273142"/>
 <text x="22" y="26" fill="#c099ff" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">PI CHISEL</text>
-<text x="779" y="26" text-anchor="end" fill="#8b98ad" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">invoking / Pi 0.85.0</text>
+<text x="779" y="26" text-anchor="end" fill="#8b98ad" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">invoking / Pi 0.87.1</text>
 <path d="M 0 42 H 801" stroke="#273142"/>
 <path d="M 26.4 74.5 L 22.0 74.5 M 26.4 74.5 L 30.8 74.5" fill="none" stroke="#00d7ff" stroke-width="1"/>
 <path d="M 35.2 74.5 L 30.8 74.5 M 35.2 74.5 L 39.6 74.5" fill="none" stroke="#00d7ff" stroke-width="1"/>
@@ -193,9 +193,9 @@
 <text x="268.4" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">e</text>
 <text x="286.0" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">·</text>
 <text x="303.6" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">~</text>
-<text x="312.4" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">1</text>
-<text x="321.2" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">9</text>
-<text x="330.0" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">7</text>
+<text x="312.4" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">2</text>
+<text x="321.2" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">0</text>
+<text x="330.0" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">3</text>
 <text x="347.6" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">t</text>
 <text x="356.4" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">o</text>
 <text x="365.2" y="205" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">k</text>
@@ -205,28 +205,18 @@
 <text x="39.6" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">e</text>
 <text x="48.4" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">s</text>
 <text x="57.2" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">c</text>
-<text x="66.0" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">a</text>
-<text x="74.8" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">p</text>
+<text x="74.8" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">k</text>
 <text x="83.6" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">e</text>
-<text x="92.4" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">/</text>
-<text x="101.2" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">c</text>
-<text x="110.0" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">t</text>
-<text x="118.8" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">r</text>
-<text x="127.6" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">l</text>
-<text x="136.4" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">+</text>
-<text x="145.2" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">c</text>
-<text x="162.8" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">k</text>
-<text x="171.6" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">e</text>
-<text x="180.4" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">e</text>
-<text x="189.2" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">p</text>
-<text x="206.8" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">o</text>
-<text x="215.6" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">r</text>
-<text x="224.4" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">i</text>
-<text x="233.2" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">g</text>
-<text x="242.0" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">i</text>
-<text x="250.8" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">n</text>
-<text x="259.6" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">a</text>
-<text x="268.4" y="247" fill="#808080" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">l</text>
+<text x="92.4" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">e</text>
+<text x="101.2" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">p</text>
+<text x="118.8" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">o</text>
+<text x="127.6" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">r</text>
+<text x="136.4" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">i</text>
+<text x="145.2" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">g</text>
+<text x="154.0" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">i</text>
+<text x="162.8" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">n</text>
+<text x="171.6" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">a</text>
+<text x="180.4" y="247" fill="#666666" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" textLength="8.8" lengthAdjust="spacingAndGlyphs">l</text>
 <path d="M 26.4 263.5 L 22.0 263.5 M 26.4 263.5 L 30.8 263.5" fill="none" stroke="#00d7ff" stroke-width="1"/>
 <path d="M 35.2 263.5 L 30.8 263.5 M 35.2 263.5 L 39.6 263.5" fill="none" stroke="#00d7ff" stroke-width="1"/>
 <path d="M 44.0 263.5 L 39.6 263.5 M 44.0 263.5 L 48.4 263.5" fill="none" stroke="#00d7ff" stroke-width="1"/>

@@ -1,6 +1,6 @@
 # Reproduce the README screenshots
 
-The README uses native Pi **0.85.0** captures from the actual PTY smoke flow with a deterministic faux provider. The prompt and response are synthetic. These are UI demonstrations, not evidence of real-model editorial quality.
+The README uses native Pi **0.87.1** captures from the actual PTY smoke flow with a deterministic faux provider. The prompt and response are synthetic. These are UI demonstrations, not evidence of real-model editorial quality.
 
 From the native `pi` branch, with `pi` on PATH and development dependencies installed:
 
@@ -11,7 +11,7 @@ PI_CHISEL_SMOKE_RESULT='Fix the login bug: trace the existing login flow, identi
 uv run --with pyte test/smoke-tui.py
 ```
 
-Set `PI_BIN` to test another installed Pi binary. The capture header records its reported version. On the OMP `main` branch, use the same command with `OMP_CHISEL_` instead of `PI_CHISEL_`; it defaults to the pinned local OMP 17.2.11 binary.
+Set `PI_BIN` to test another installed Pi binary. The capture header records its reported version. On the OMP `main` branch, use the same command with `OMP_CHISEL_` instead of `PI_CHISEL_`; it defaults to the pinned local OMP 18.3.5 binary.
 
 Keep capture runs isolated (do not set `PI_CHISEL_CONFIGURED` / `OMP_CHISEL_CONFIGURED`). Use a public, non-sensitive workspace: the context inspector shows actual bounded project metadata. No real provider is called, and the smoke test also checks cancellation, source exclusion, retries, history, safe replacement, and explicit-only submission.
 
