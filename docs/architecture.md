@@ -1,16 +1,16 @@
-# Pi Chisel architecture on OMP 17.2.11
+# Pi Chisel architecture on OMP
 
 This document covers Pi Chisel's secondary OMP integration. The native Pi implementation and its verified Pi-specific architecture are maintained on the [`pi` branch](https://github.com/feveromo/pi-chisel/tree/pi).
 
-The OMP integration is designed and tested against OMP `17.2.11`. Source references below are relative to `node_modules/@oh-my-pi/pi-coding-agent` unless another package is named.
+The OMP integration is tested against OMP `18.3.5`. Source references below are relative to `node_modules/@oh-my-pi/pi-coding-agent` unless another package is named.
 
 ## Plugin discovery and lifetime
 
-OMP packages declare extension entry points in the `omp.extensions` package manifest field. This repository exposes `./src/index.ts`, uses the `omp-plugin` keyword, and can be linked in place with `omp plugin link .`.
+OMP packages declare extension entry points in the `omp.extensions` package manifest field. This repository exposes `./src/prompt-optimizer.ts`, uses the `omp-plugin` keyword, and can be linked in place with `omp plugin link .`.
 
 `src/extensibility/plugins/types.ts` defines the plugin manifest, while `src/extensibility/extensions/loader.ts` loads the TypeScript factory and binds one `ExtensionAPI` to the active session. `src/extensibility/extensions/types.ts` defines command, shortcut, event, context, and UI contracts.
 
-Chisel's factory in `src/index.ts` performs only bounded setup:
+Chisel's factory in `src/prompt-optimizer.ts` performs only bounded setup:
 
 - Load and validate the local optimizer configuration.
 - Register one shortcut and five slash commands, including an explicit pre-send inspector entry point.
@@ -23,7 +23,9 @@ No provider request or persistent UI starts during extension loading. Reloading 
 
 `ExtensionAPI.registerShortcut()` is OMP's public shortcut boundary. Chisel registers the configured `KeyId`, whose default is `ctrl+shift+k`. The settings overlay receives OMP's resolved keybinding map, normalizes modifier order, and rejects a conflict before persisting a replacement shortcut. OMP still performs the final registration-time conflict check against other extensions.
 
-`ExtensionUIContext.getEditorText()` and `setEditorText()` expose the whole unsent draft. OMP 17.2.11 does not expose a cursor position, selection range, or replace-selection operation through the extension context, so Chisel intentionally optimizes the whole editor buffer. It does not intercept terminal input or patch OMP's editor.
+Chisel's overlays match `tui.select.confirm`, `cancel`, `up`, `down`, `pageUp`, and `pageDown` through the host `KeybindingsManager` (`src/ui/keys.ts`) and render hints from the currently bound keys. Single-letter review actions and Tab remain fixed.
+
+`ExtensionUIContext.getEditorText()` and `setEditorText()` expose the whole unsent draft. OMP does not expose a cursor position, selection range, or replace-selection operation through the extension context, so Chisel intentionally optimizes the whole editor buffer. It does not intercept terminal input or patch OMP's editor.
 
 The shortcut captures the editor text without submitting it. The slash-command fallback accepts the draft as its argument because entering a slash command has already replaced the editor contents.
 
@@ -40,34 +42,38 @@ All views are transient. Generation shows **Pi Chisel at Work**; review shows **
 
 ## Grounding context
 
-The OMP context exposes `cwd`, `getSystemPrompt()`, and a read-only `sessionManager`. Chisel uses those public APIs only.
+The OMP context exposes `cwd`, `getSystemPrompt()`, `isProjectTrusted()`, and a read-only `sessionManager`. Chisel uses those public APIs only.
 
 Grounding has two independently bounded layers:
 
-1. **Workspace evidence.** `src/project-context.ts` finds a project root from the active working directory and collects a small manifest summary, README excerpt, top-level landmarks, branch name, and explicit in-project guidance blocks already present in OMP's system prompt. The generated identity uses project-relative paths, and guidance files outside the detected project root are excluded. OMP 17.2.11 does not expose the former Pi project-trust predicate, so context mode `none` is the hard opt-out for workspace inspection and transmission.
+1. **Workspace evidence.** `src/project-context.ts` finds a project root from the active working directory and collects a small manifest summary, README excerpt, top-level landmarks, branch name, and explicit in-project guidance blocks already present in OMP's system prompt. The generated identity uses project-relative paths, and guidance files outside the detected project root are excluded. In an untrusted project (`isProjectTrusted()` is false), only workspace identity is used and project files are not read. Context mode `none` remains the hard opt-out for workspace and session transmission.
 2. **Active-branch evidence.** `sessionManager.getBranch()` supplies the current branch. `src/context-builder.ts` retains visible user and assistant text plus compaction and branch summaries (including materialized retained dialogue when present). `auto` matches draft terms/references and retains the user instruction behind a matching assistant reply. User sources are allocated first, with the newest relevant user turn ahead of older turns; assistant commentary cannot evict them. `recent` removes the relevance filter, not the user priority. Brevity alone no longer expands the conversation budget.
 3. **Explicit tool excerpts.** Only paired completed results for a small built-in-tool allowlist in the last 64 entries are considered. At most eight candidates are offered, each capped at 240 estimated tokens; none are initially selected. The inspector allows at most three results / 512 tokens total, still inside the existing context budget. No tools are exposed to the optimizer. Unknown tools, hidden entries, arbitrary arguments/details, and recognizable credential-file targets remain excluded. This is not exhaustive secret detection.
 
 `src/evidence.ts` selects whole sentences/lines, prioritizing constraint-bearing units and matching references. Omission markers are explicit; indivisible units that do not fit can be omitted instead of silently splicing away a negation. Source IDs, kinds, labels, exact bounded text, and truncation flags survive into review. Lexical matching and English constraint cues are heuristics, not semantic guarantees.
 
-`estimateTextTokens()` uses an approximate UTF-8-bytes/4 estimate in this checkout. The exact original, revision candidate/feedback, output allowance, request framing, and provider margin are reserved first. Whole sources are removed before any user-controlled request text is truncated. Models with missing context metadata retain bounded defaults.
+`estimateTextTokens()` in `src/host.ts` uses an approximate UTF-8-bytes/4 estimate on OMP. The exact original, revision candidate/feedback, output allowance, request framing, and provider margin are reserved first. Whole sources are removed before any user-controlled request text is truncated. Models with missing context metadata retain bounded defaults.
 
 ## Model selection and provider invocation
 
 `ExtensionContext.modelRegistry` is OMP's live registry. Chisel's model picker reads `getAvailable()` and displays provider, model ID, and model name. A saved pin is only a `{ provider, id }` preference; it never switches the main session model.
 
-`src/model-client.ts` performs one transcript-isolated request through canonical `@oh-my-pi/pi-ai` APIs:
+`src/model-client.ts` builds and validates one transcript-isolated request; `streamOptimizerModel()` in `src/host.ts` starts it through canonical `@oh-my-pi/pi-ai` APIs:
 
-1. Verify that OMP still has the selected provider.
-2. Apply OMP's current provider-specific base URL and headers.
-3. Obtain an OMP `ApiKeyResolver` with `modelRegistry.resolver(model, sessionId)`.
+1. Verify that OMP still has the selected provider, and apply its configured base URL.
+2. Fail early with a readable error when `modelRegistry.getApiKey()` finds no credential.
+3. Await `modelRegistry.resolveModelHeaders()` for the model's complete configured header chain (OMP 18 resolves headers asynchronously), and obtain a session-sticky `ApiKeyResolver` with `modelRegistry.resolver(model, sessionId)`.
 4. Build a `Context` containing the optimizer system instruction and one user message with explicit evidence and draft boundaries.
 5. Call `streamSimple()` with a fresh UUID session ID, `cacheRetention: "none"`, an abort signal, and the computed output limit. Revisions contain the original, candidate, and explicit editing feedback as separate sections.
 6. Consume text events until the terminal assistant message, then reject empty, malformed, truncated, or errored output. At every intensity an unchanged response is a successful no-op, preserving the exact original bytes.
 
 This path does not call the main agent loop, append session entries, expose tools, or mutate the active model. OMP owns credential refresh and provider dispatch. Chisel only receives the resolved stream events.
 
-OMP's source-loaded extension graph and bundled host currently keep separate custom-API registries. Production providers are built into OMP and are unaffected. The PTY faux-provider fixture explicitly registers its deterministic stream in both registries so the isolated and configured smoke paths exercise the same Chisel boundary.
+OMP's source-loaded extension graph and bundled host currently keep separate custom-API registries. Production providers are built into OMP and are unaffected. The PTY faux-provider fixture explicitly registers its deterministic stream in both registries so the isolated and configured smoke paths exercise the same Chisel boundary. OMP 18 prepends `<system-reminder>` blocks to user turns; the fixture strips them before echoing the submitted draft.
+
+## Host boundary
+
+`src/host.ts` is the only source file that differs from the native Pi build on the `pi` branch. It re-exports the host packages used by shared code and implements the host-specific pieces: session entries, system prompt text, token estimation, request context shape, select-list theme, loader construction, line truncation, and the optimizer model call. Every other file under `src/` must stay byte-identical across branches.
 
 ## Review, inspection, and revision state
 
