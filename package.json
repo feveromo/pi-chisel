@@ -1,6 +1,6 @@
 {
 	"name": "pi-chisel",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"description": "Turn rough drafts into clear prompts in Pi: review, compare, and refine before replacing your editor text. Never auto-submits.",
 	"license": "MIT",
 	"author": "feveromo",
