@@ -1,11 +1,14 @@
 {
 	"name": "pi-chisel",
-	"version": "0.1.0",
-	"private": true,
-	"description": "Pi Chisel polishes unsent drafts with native Pi integration.",
+	"version": "0.1.1",
+	"description": "Turn rough drafts into clear prompts in Pi: review, compare, and refine before replacing your editor text. Never auto-submits.",
 	"license": "MIT",
 	"author": "feveromo",
-	"homepage": "https://github.com/feveromo/pi-chisel#readme",
+	"homepage": "https://github.com/feveromo/pi-chisel/tree/pi#readme",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/feveromo/pi-chisel.git"
@@ -32,7 +35,8 @@
 	"pi": {
 		"extensions": [
 			"./src/prompt-optimizer.ts"
-		]
+		],
+		"image": "https://cdn.jsdelivr.net/npm/pi-chisel@0.1.1/docs/images/pi-chisel-review.png"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-ai": "*",
@@ -56,6 +60,7 @@
 		"test:smoke": "python3 test/smoke-tui.py",
 		"test:capture": "python3 -m unittest discover -s test -p 'test_*.py'",
 		"smoke:configured": "bash test/smoke-configured.sh",
+		"pack:check": "npm pack --dry-run --ignore-scripts",
 		"validate": "npm run lint && npm run check && npm test && npm run test:capture && npm run test:smoke && npm run smoke:configured"
 	}
 }
