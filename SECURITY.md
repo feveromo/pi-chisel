@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Security fixes are provided for the current native Pi release and the latest OMP integration on `main`. The verified compatibility boundaries are Pi `0.87.1` and OMP `18.3.5`.
+Security fixes are provided for the current native Pi release and the latest OMP integration on `main`. The verified compatibility boundaries are Pi `0.87.1` and OMP `18.4.0`.
 
 ## Reporting a vulnerability
 

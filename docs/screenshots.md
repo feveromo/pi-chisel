@@ -11,7 +11,7 @@ PI_CHISEL_SMOKE_RESULT='Fix the login bug: trace the existing login flow, identi
 uv run --with pyte test/smoke-tui.py
 ```
 
-Set `PI_BIN` to test another installed Pi binary. The capture header records its reported version. On the OMP `main` branch, use the same command with `OMP_CHISEL_` instead of `PI_CHISEL_`; it defaults to the pinned local OMP 18.3.5 binary.
+Set `PI_BIN` to test another installed Pi binary. The capture header records its reported version. On the OMP `main` branch, use the same command with `OMP_CHISEL_` instead of `PI_CHISEL_`; it defaults to the pinned local OMP 18.4.0 binary.
 
 Keep capture runs isolated (do not set `PI_CHISEL_CONFIGURED` / `OMP_CHISEL_CONFIGURED`). Use a public, non-sensitive workspace: the context inspector shows actual bounded project metadata. No real provider is called, and the smoke test also checks cancellation, source exclusion, retries, history, safe replacement, and explicit-only submission.
 
