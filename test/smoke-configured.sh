@@ -55,7 +55,7 @@ if result.returncode != 0:
     raise SystemExit(result.stderr or f"Pi RPC exited with {result.returncode}")
 PY
 
-python3 - "$output" "$root/src/index.ts" <<'PY'
+python3 - "$output" "$root/src/prompt-optimizer.ts" <<'PY'
 import json
 import re
 import sys
@@ -80,6 +80,6 @@ for name in ("prompt-optimize", "prompt-optimize-context"):
             raise SystemExit(f"{name} resolves to {entry}, not {expected} or its plain re-export")
 PY
 
-printf 'Configured Pi runtime resolved prompt-optimize from %s\n' "$root/src/index.ts"
+printf 'Configured Pi runtime resolved prompt-optimize from %s\n' "$root/src/prompt-optimizer.ts"
 PI_CHISEL_CONFIGURED=1 PI_CHISEL_SMOKE_SHORTCUT="$shortcut" PI_BIN="$pi_bin" \
   python3 "$root/test/smoke-tui.py"

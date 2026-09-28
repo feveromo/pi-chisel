@@ -128,7 +128,7 @@ The model preference is either `null` for “follow current chat model” or `{ 
 ## File responsibilities
 
 ```text
-src/index.ts                    extension factory and Pi registrations
+src/prompt-optimizer.ts         extension factory and Pi registrations
 src/controller.ts               lifecycle and single-invocation ownership
 src/state.ts                    mutable config state with atomic persistence
 src/config.ts                   schema, validation, shortcut checks, file store
