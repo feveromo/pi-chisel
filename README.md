@@ -42,7 +42,13 @@ Captured from native Pi **0.85.0** using a deterministic faux provider and synth
 
 The native Pi package targets `@earendil-works/pi-coding-agent` **0.84.1**, with TUI smoke tests on **0.84.1** and **0.85.0**. Configure a model through `/login` or `/model`.
 
-Install the current native integration from its runtime branch:
+Install the native Pi integration from npm:
+
+```bash
+pi install npm:pi-chisel
+```
+
+Alternatively, install from its runtime branch:
 
 ```bash
 pi install git:github.com/feveromo/pi-chisel@pi
@@ -57,7 +63,7 @@ pi list
 Try Pi Chisel for one session without installing it:
 
 ```bash
-pi -e git:github.com/feveromo/pi-chisel@pi
+pi -e npm:pi-chisel
 ```
 
 The older pinned release remains available as `@pi-v0.1.0`; it does not contain the improvements documented here.
