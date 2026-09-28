@@ -99,7 +99,7 @@ No method on `AgentSession`, `SessionManager`, or `ExtensionAPI` is used to send
 
 ## Context inspection and revision state
 
-The default shortcut still generates immediately. `inspectContext: true` or `/prompt-optimize-context <draft>` opens preflight before any provider call; cancelling sends nothing. Review's **C** control opens the same inspector for the next pass, explicitly warning that it cannot unsend earlier requests. It previews the bounded source text used by request construction, sanitized only for terminal display. Inclusion is not verification or model attribution.
+The default shortcut still generates immediately. `inspectContext: true` or `/chisel-context <draft>` opens preflight before any provider call; cancelling sends nothing. Review's **C** control opens the same inspector for the next pass, explicitly warning that it cannot unsend earlier requests. It previews the bounded source text used by request construction, sanitized only for terminal display. Inclusion is not verification or model attribution.
 
 `src/workflow.ts` freezes the source inventory for the invocation. Exclusions are never replenished and survive failures/history navigation. If a new model or longer revision reduces capacity, the remaining source selection requires approval before sending. Tool selection is explicit and cannot silently evict user intent to fit.
 

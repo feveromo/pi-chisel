@@ -18,36 +18,30 @@ export default async function promptOptimizerExtension(
 		handler: async (ctx) => controller.optimize(ctx),
 	});
 
-	pi.registerCommand("prompt-optimize", {
+	pi.registerCommand("chisel", {
 		description:
-			"Chisel a draft without submitting it (usage: /prompt-optimize <draft>)",
-		handler: async (args, ctx) => {
-			if (!args) {
-				await controller.optimize(ctx, "");
-				return;
-			}
-			await controller.optimize(ctx, args);
-		},
+			"Chisel a draft without submitting it (usage: /chisel <draft>)",
+		handler: async (args, ctx) => controller.optimize(ctx, args || ""),
 	});
 
-	pi.registerCommand("prompt-optimize-context", {
+	pi.registerCommand("chisel-context", {
 		description:
-			"Inspect context before sending a draft (usage: /prompt-optimize-context <draft>)",
+			"Inspect context before sending a draft (usage: /chisel-context <draft>)",
 		handler: async (args, ctx) => controller.optimize(ctx, args || "", true),
 	});
 
-	pi.registerCommand("prompt-optimize-model", {
+	pi.registerCommand("chisel-model", {
 		description: "Choose and persist Pi Chisel's independent model",
 		handler: async (_args, ctx) => controller.chooseModel(ctx),
 	});
 
-	pi.registerCommand("prompt-optimize-settings", {
+	pi.registerCommand("chisel-settings", {
 		description:
 			"Configure Pi Chisel's grounding, intensity, shortcut, and preview",
 		handler: async (_args, ctx) => controller.showSettings(ctx),
 	});
 
-	pi.registerCommand("prompt-optimize-restore", {
+	pi.registerCommand("chisel-restore", {
 		description: "Restore the draft Pi Chisel most recently replaced",
 		handler: async (_args, ctx) => controller.restore(ctx),
 	});

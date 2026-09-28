@@ -218,7 +218,7 @@ while not counter_path.exists():
 pump(0.2)
 
 # Preflight is a real transmission boundary, not a post-hoc privacy claim.
-send(b"/prompt-optimize-context inspect this draft")
+send(b"/chisel-context inspect this draft")
 send(b"\r")
 wait_for("Before Chisel sends")
 if request_count() != 0:
