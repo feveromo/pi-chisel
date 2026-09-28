@@ -78,6 +78,7 @@ Private user-level guidance must stay out of project context.
 		expect(reference?.estimatedTokens).toBeLessThanOrEqual(700);
 		expect(reference?.trusted).toBe(true);
 		expect(reference?.sourceCount).toBeGreaterThanOrEqual(4);
+		expect(reference?.sources?.[0]?.label).toBe("Workspace identity");
 		expect(reference?.text).toContain("Project: ");
 		expect(reference?.text).toContain("Git branch: feature/context");
 		expect(reference?.text).toContain("Package: contextual-tool");

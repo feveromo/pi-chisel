@@ -1,6 +1,5 @@
 import type { OptimizerConfig } from "../config.ts";
 import {
-	Container,
 	decodePrintableKey,
 	getSettingsListTheme,
 	type KeybindingsConfig,
@@ -11,7 +10,7 @@ import {
 	type Theme,
 	type TUI,
 } from "../host.ts";
-import { accentBorder, sanitizeInline } from "./frame.ts";
+import { FramedContainer, sanitizeInline } from "./frame.ts";
 import { keyHint, matchesBinding } from "./keys.ts";
 
 export type SettingsAction = "close" | "model" | "shortcut";
@@ -22,7 +21,7 @@ export interface SettingsResult {
 	resolvedKeybindings: KeybindingsConfig;
 }
 
-export class OptimizerSettingsComponent extends Container {
+export class OptimizerSettingsComponent extends FramedContainer {
 	readonly width = 76;
 	private readonly settingsList: SettingsList;
 	private readonly working: OptimizerConfig;
@@ -35,7 +34,7 @@ export class OptimizerSettingsComponent extends Container {
 		resolvedKeybindings: KeybindingsConfig,
 		done: (result: SettingsResult) => void,
 	) {
-		super();
+		super(theme, "✦ Chisel · settings");
 		this.working = structuredClone(config);
 		const items: SettingItem[] = [
 			{
@@ -79,19 +78,11 @@ export class OptimizerSettingsComponent extends Container {
 			},
 		];
 
-		this.addChild(accentBorder(theme));
 		this.addChild(
-			new Text(theme.fg("accent", theme.bold("  ✦ Pi Chisel settings")), 0, 0),
+			new Text(theme.fg("muted", `Model: ${sanitizeInline(modelLabel)}`), 0, 0),
 		);
 		this.addChild(
-			new Text(
-				theme.fg("muted", `  Model: ${sanitizeInline(modelLabel)}`),
-				0,
-				0,
-			),
-		);
-		this.addChild(
-			new Text(theme.fg("muted", `  Shortcut: ${config.shortcut}`), 0, 0),
+			new Text(theme.fg("muted", `Shortcut: ${config.shortcut}`), 0, 0),
 		);
 		this.addChild(new Spacer(1));
 
@@ -120,13 +111,12 @@ export class OptimizerSettingsComponent extends Container {
 			new Text(
 				theme.fg(
 					"dim",
-					`  m choose model · k change shortcut · ${keyHint("tui.select.cancel", "save and close")}`,
+					`m choose model · k change shortcut · ${keyHint("tui.select.cancel", "save and close")}`,
 				),
 				0,
 				0,
 			),
 		);
-		this.addChild(accentBorder(theme));
 
 		this.finish = (action: SettingsAction) =>
 			done({ action, config: this.working, resolvedKeybindings });
