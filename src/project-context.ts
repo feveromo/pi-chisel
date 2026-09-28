@@ -368,7 +368,7 @@ export async function buildWorkspaceReference(
 		selected.push({
 			id: `workspace:${index}`,
 			kind: "workspace",
-			label: section.text.split("\n")[0] ?? "Workspace",
+			label: (section.text.split("\n")[0] ?? "Workspace").replace(/:$/, ""),
 			text: fitted,
 			truncated: fitted !== section.text,
 			trusted,

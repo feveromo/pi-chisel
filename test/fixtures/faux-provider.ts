@@ -12,8 +12,8 @@ import {
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 let optimizationCount = 0;
-const PROVIDER = "prompt-optimizer-faux";
-const MODEL = "faux-model";
+const PROVIDER = "chisel-demo";
+const MODEL = "scripted-model";
 
 function textFromLastUser(context: Context): string {
 	const message = [...context.messages]
@@ -59,14 +59,14 @@ export default function fauxProvider(pi: ExtensionAPI): void {
 			writeFileSync(process.env.CHISEL_SMOKE_COUNTER, "0", { mode: 0o600 });
 	});
 	pi.registerProvider(PROVIDER, {
-		name: "Pi Chisel Faux Provider",
+		name: "Chisel demo provider",
 		baseUrl: "https://example.invalid",
 		apiKey: "faux-test-key",
-		api: "prompt-optimizer-faux-api",
+		api: "chisel-demo-api",
 		models: [
 			{
 				id: MODEL,
-				name: "Pi Chisel Faux Model",
+				name: "Chisel scripted model",
 				reasoning: false,
 				input: ["text"],
 				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
