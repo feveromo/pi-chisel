@@ -16,4 +16,4 @@ Chisel sends the unsent draft and, unless context mode is `none`, selected bound
 
 Use pre-send inspection (`inspectContext` or `/chisel-context`) to review/exclude evidence before the first transmission. Review-time exclusions apply only to subsequent requests and cannot undo earlier disclosure. The tool allowlist and credential-target filter are not exhaustive secret detection; inspect any selected excerpts. Source inclusion is not verification, and untrusted evidence is never authorized to control the optimizer or execute tools.
 
-See [Privacy and safety](README.md#privacy-and-safety) and [context inspection](README.md#inspect-context-and-select-tool-evidence) for provider retention, opt-in, and UI behavior.
+See [Privacy and safety](README.md#privacy-and-safety) and [context inspection](README.md#see-what-gets-sent) for provider retention, opt-in, and UI behavior.

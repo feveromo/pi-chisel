@@ -1,222 +1,177 @@
 # Pi Chisel
 
-Pi Chisel turns rough drafts into clear, send-ready prompts without submitting them. Your original stays in the editor until you review the rewrite and explicitly choose what to do next.
+Chisel is a [Pi](https://pi.dev) extension that turns a rough prompt draft into a clearer one and shows you the result before anything changes. It never submits for you.
 
-- **Review before replacing** — use the rewrite, edit it, compare versions, retry, switch models, or keep the original.
-- **Nothing is auto-submitted** — accepting a rewrite only updates the editor.
-- **More useful, still yours** — Strong builds out rough ideas with relevant detail while preserving your goal, voice, uncertainty, and explicit limits.
-- **Context you control** — intent-aware workspace/session excerpts, optional pre-send inspection, and explicitly selected tool evidence.
-- **Private by design** — drafts and responses aren't persisted or added to the conversation transcript.
-- **Provider-independent** — follows the current chat model or uses a separately pinned optimizer model.
+Type `fix the login bug`, press **Ctrl+Shift+K**, and review what comes back:
 
-Pi Chisel's native Pi package is the primary integration. A separate OMP integration is supported for users of that host.
+![Chisel's review overlay with the rewritten login-bug prompt, a note that it's still unsent, and the available keys](docs/images/pi-chisel-review.svg)
 
-## See it in action
+*Captured in Pi 0.87.1 with a scripted model, so it shows the real UI but not real rewrite quality. [How the screenshots are made](docs/screenshots.md).*
 
-Start with `fix the login bug`. Review a fuller prompt before it touches your editor:
+Use the rewrite, edit it, compare it with your original, send it back for another pass with notes, or throw it away. Your draft stays put until you accept, and accepting only swaps the editor text.
 
-![Pi Chisel review with a synthetic login-repair prompt, unsent status, and use, edit, compare, retry, context, model, and cancel actions](docs/images/pi-chisel-review.svg)
-
-<details>
-<summary>Compare changes, inspect context, and cancel generation</summary>
-
-See exactly what changed, with the original still available:
-
-![Pi Chisel focused comparison of the original login request and the fuller synthetic rewrite](docs/images/pi-chisel-comparison.svg)
-
-Optionally inspect and exclude bounded sources **before sending**:
-
-![Pi Chisel pre-send inspector with unchecked tool opt-in, exact source excerpts, and a nothing-sent-yet notice](docs/images/pi-chisel-context.svg)
-
-Cancel while Chisel works; the original stays untouched:
-
-![Pi Chisel generation overlay with the selected faux model, bounded context, and cancel action](docs/images/pi-chisel-invoking.svg)
-
-</details>
-
-Captured from native Pi **0.87.1** using a deterministic faux provider and synthetic prompts. These show the real UI, not measured model quality. [Reproduce the captures](docs/screenshots.md).
+Chisel adds a little context from your project and conversation so the rewrite can be specific, and you can see and trim exactly what it sends. The request runs off to the side: it never enters your session, and Chisel doesn't save drafts or responses. Rewrites keep your goal, hedges, limits, and tone, so a question stays a question. Chisel uses the model you're chatting with, or one you pin just for it.
 
 ## Install
 
 ### Pi
 
-The native Pi package requires Pi **0.87.1 or newer**. Typechecks, unit tests, and PTY smoke tests are verified on **0.87.1**. Configure a model through `/login` or `/model`.
-
-Install the native Pi integration from npm:
+You need Pi 0.87.1 or newer (tested on 0.87.1) and a model set up with `/login` or `/model`.
 
 ```bash
 pi install npm:pi-chisel
 ```
 
-Alternatively, install from its runtime branch:
+Run `/reload` in any open session, or start a new one. `pi list` should now show the package.
 
-```bash
-pi install git:github.com/feveromo/pi-chisel@pi
-```
+To install from Git instead, use `pi install git:github.com/feveromo/pi-chisel@pi`. To try Chisel for one session without installing it, run `pi -e npm:pi-chisel`.
 
-Run `/reload` in an open Pi session, or start a new one, then verify the package:
+### OMP
 
-```bash
-pi list
-```
-
-Try Pi Chisel for one session without installing it:
-
-```bash
-pi -e npm:pi-chisel
-```
-
-The older pinned release remains available as `@pi-v0.1.0`; it does not contain the improvements documented here.
-
-### OMP integration
-
-The secondary OMP integration is verified against OMP **18.4.0** and its canonical `@oh-my-pi/*` APIs. Later OMP versions may work but aren't part of the tested compatibility boundary. Configure a model through `/login` or `/model`, then install:
+A separate build for [OMP](https://omp.sh) (oh-my-pi) lives on the `main` branch. It's tested on OMP 18.4.0; later versions may work but aren't tested. Set up a model with `/login` or `/model`, then:
 
 ```bash
 omp plugin install github:feveromo/pi-chisel
 ```
 
-Run `/reload` in an open OMP session, or start a new one, then verify the plugin:
-
-```bash
-omp plugin list
-```
-
-From a main-branch checkout, run the OMP integration directly without installing it:
+Run `/reload` or start a new session, and check it with `omp plugin list`. Remove it with `omp plugin uninstall pi-chisel`. To run it from a `main` checkout without installing:
 
 ```bash
 omp --no-extensions -e ./src/prompt-optimizer.ts
 ```
 
-Uninstall it with:
-
-```bash
-omp plugin uninstall pi-chisel
-```
-
 ## Use
 
-1. Type a draft in the editor.
-2. Press **Ctrl+Shift+K**.
-3. Review the result **Fresh off the Chisel**:
-   - **Enter** or **A** — replace the draft without submitting it.
-   - **E** — edit the complete rewrite.
-   - **Tab** or **V** — cycle rewrite, changes, and original views.
-   - **D** / **O** — jump to focused changes or the original; **N/P** (or **]/[**) move between changes.
-   - **C** — inspect context, exclude sources, optionally select tool excerpts, and regenerate.
-   - **R** — steer another pass with feedback (blank means rephrase; Escape returns without a request).
-   - **B** — return to the previous candidate after a successful retry or manual edit.
-   - **M** — choose the optimizer model.
-   - **Escape** or **Q** — keep the original.
-4. After replacement, press **U** to restore the previous draft, or close the confirmation to keep the rewrite.
-5. Submit normally when you're ready.
+Type a draft and press **Ctrl+Shift+K**. Chisel opens a review once the rewrite is ready. Press **Esc** while it's working to cancel, and nothing changes.
 
-Commands:
+In the review:
 
-- `/chisel <draft>` — optimize an explicit draft. Because slash commands occupy the editor and may trim the outer command line, use the shortcut when byte-for-byte preservation matters.
-- `/chisel-context <draft>` — inspect the exact bounded context before the first provider request. For shortcut-based preflight, enable **Inspect before sending** in settings.
-- `/chisel-model` — choose the optimizer model.
-- `/chisel-settings` — configure context, budget, intensity, preview, model, and shortcut.
-- `/chisel-restore` — restore the most recently replaced draft when it's still available in memory.
+| Key | What it does |
+|---|---|
+| **Enter** or **A** | Use the rewrite. It replaces your draft but isn't sent. |
+| **E** | Edit the rewrite first. |
+| **Tab** or **V** | Cycle through the rewrite, the changes, and your original. |
+| **D** / **O** | Jump to the changes or the original. |
+| **N** / **P** | Next or previous change. **]** and **[** work too. |
+| **R** | Another pass. Say what to change, or leave it blank for a fresh take. |
+| **B** | Go back to the previous candidate after another pass or an edit. |
+| **C** | Review or change the context for the next pass. |
+| **M** | Switch the model Chisel uses. |
+| **Esc** or **Q** | Keep your original. |
 
-Upgrading from Pi Chisel 0.1.x? The commands were renamed from `/prompt-optimize*` to `/chisel*`; the shortcut and saved settings are unchanged.
+After you accept, press **U** in the confirmation to put your old draft back, or run `/chisel-restore` later in the same session. Then send the prompt the way you normally would.
 
-## Models and settings
+The changes view shows what the rewrite added and removed:
 
-Pi Chisel follows the current chat model by default. Pinning another model affects only the optimizer; it doesn't change the conversation model. If the pinned model becomes unavailable, Pi Chisel reports the fallback and uses the current model for that pass.
+![Changes view showing the one-line original above the longer rewrite, with added text highlighted](docs/images/pi-chisel-comparison.svg)
 
-The Pi integration uses Pi's registered provider and resolved authentication, including OAuth credentials, provider headers, provider-scoped environment, and credential-specific base URLs. Its settings are stored at:
+Enter, Esc, the arrow keys, and PgUp/PgDn follow your `tui.select.*` keybindings, and the hints on screen show what you've actually bound. Chisel always works on the whole draft, not a selection. If your terminal or desktop grabs Ctrl+Shift+K, set a different shortcut in `/chisel-settings`.
 
-```text
-~/.pi/agent/prompt-optimizer.json
-```
+### Commands
 
-The OMP integration uses OMP's authenticated model registry, session-sticky credential resolver, the model's resolved header chain, and the provider's configured base URL. Its settings are stored separately at:
+| Command | What it does |
+|---|---|
+| `/chisel <draft>` | Chisel the text after the command. |
+| `/chisel-context <draft>` | Same, but show the context before anything is sent. |
+| `/chisel-model` | Choose Chisel's model. |
+| `/chisel-settings` | Change the context, inspection, budget, intensity, review view, model, and shortcut. |
+| `/chisel-restore` | Put back the draft Chisel last replaced. |
 
-```text
-~/.omp/agent/prompt-optimizer.json
-```
+A slash command can lose spaces around its text, so use the shortcut when exact whitespace matters. Before 0.2.0 these commands were `/prompt-optimize*`; your shortcut and settings carry over.
 
-Run `/chisel-settings` to configure either integration. Settings are written atomically with mode `0600` and contain model IDs and UI preferences, never credentials or drafts.
+## Settings
 
-Default configuration:
+Change these with `/chisel-settings`. They're saved to `~/.pi/agent/prompt-optimizer.json`, or `~/.omp/agent/prompt-optimizer.json` on OMP. (The filename predates the rename.) The file holds only model IDs and preferences, never credentials or drafts, and is written atomically with `0600` permissions.
 
-```json
-{
-  "version": 1,
-  "model": null,
-  "contextMode": "auto",
-  "contextTokenBudget": 1800,
-  "intensity": "standard",
-  "shortcut": "ctrl+shift+k",
-  "previewMode": "optimized",
-  "inspectContext": false
-}
-```
-
-### Context modes
-
-- `auto` — keeps workspace identity, favors relevant project/session references, and protects user instructions ahead of assistant commentary. Explicit backward references receive more history; brevity alone does not.
-- `recent` — considers recent dialogue and workspace evidence without the relevance filter, still prioritizing user intent within the budget.
-- `none` — omits all reference evidence. Revisions still include the original, candidate, and feedback.
-
-Workspace context can include the project name, relative working directory, branch, manifest summary, README overview, top-level landmarks, and in-project guidance already loaded by the host. Both integrations honor the host's project-trust boundary: in an untrusted project, only workspace identity is used and project files aren't inspected. Neither integration adds absolute workspace identity paths, includes guidance outside the project root, or follows metadata-file symlinks. Source contents can themselves contain paths or sensitive material: this is not a general redactor.
-
-Session selection favors explicit references and user turns, retaining the user instruction associated with a matching assistant reply. It labels summaries as lossy evidence, keeps selected items chronological, and prioritizes complete constraint-bearing sentences/lines when excerpts must shrink. Thinking, hidden entries, extension metadata, telemetry, and diagnostics remain excluded. Tool traffic is excluded by default; see the opt-in below. The exact original, revision candidate/feedback, and output allowance take priority over context.
-
-### Inspect context and select tool evidence
-
-The default shortcut still generates immediately. Enable `inspectContext` or use `/chisel-context <draft>` when you want approval **before transmission**. Cancelling that initial inspector makes no provider request. **C** during review changes the *next* request; it cannot unsend earlier ones.
-
-The inspector shows eligible source labels and bounded excerpts, with terminal controls sanitized for display; only checked sources are queued. During review, **supplied** marks the sources actually sent for that candidate, independently of next-pass checkboxes. These are **sources supplied**, not verified facts or model explanations. Use **↑↓** to select a source, **Space** to include/exclude it, **PgUp/PgDn** or **Home/End** to read the excerpt, **0** for draft-only, and **Enter** to generate. **Escape** discards inspector changes and returns. Excluding sources does not silently pull in replacements.
-
-**T** jumps to optional tool excerpts. All start unchecked. Only paired completed results from `bash`, `read`, `grep`, `find`, `ls`, `edit`, and `write` are eligible, taken from the last 64 session entries. Up to eight bounded candidates are offered; select at most three / 512 tokens total, within the existing overall context budget. Results show their source, command/path when available, historical status, and omission markers. Unknown tools, unpaired results, arbitrary argument/detail objects, and recognizable credential-file targets are excluded. This is not exhaustive secret detection: inspect excerpts before opting in. Chisel never runs tools itself.
-
-Selections and exclusions last only for the current invocation, including retries. A failure does not re-enable excluded sources. Source text is frozen for the invocation; if a different model or a longer revision leaves less room, Chisel asks you to approve the remaining sources before sending. `none` disables workspace, session, and tool evidence, including the tool candidate list.
-
-### Another pass and already-good drafts
-
-Another pass uses the exact original, the current candidate, and your feedback. The native multiline editor shows its submit key: **Enter** in Pi, **Ctrl+Enter/Ctrl+Q** in OMP. The original remains the intent anchor; only explicit feedback authorizes changing it. Failed/cancelled retries return to the current candidate. **B** swaps between the two most recent candidates; there is no persistent revision history. Review view/scroll position survives opening other dialogs. The editor stays untouched until acceptance.
-
-If a model returns the original unchanged at any intensity, review shows **ALREADY GOOD**. Accepting it is a no-op, not an error. The review can open on `optimized`, `original`, or `diff`.
+| Setting | Default | Options |
+|---|---|---|
+| `contextMode` | `auto` | `auto`, `recent`, or `none`. See [Context](#context). |
+| `inspectContext` | `false` | `true` shows the context before every request. |
+| `contextTokenBudget` | `1800` | Most context tokens per request. The menu offers 512 to 8192. |
+| `intensity` | `standard` | `light`, `standard`, or `strong`. |
+| `previewMode` | `optimized` | The view the review opens on: `optimized`, `diff`, or `original`. |
+| `shortcut` | `ctrl+shift+k` | Any key combination that isn't already bound. |
+| `model` | `null` | `null` follows your chat model. See [Models](#models). |
 
 ### Intensity
 
-- `light` — clean up wording and grammar, staying close to the original.
-- `standard` — clarify and organize the request, adding modest detail where needed.
-- `strong` — build out a rough idea into a substantially more useful prompt with relevant context and sensible supporting detail—not just a copyedit.
+- `light` fixes wording and grammar and stays close to what you wrote.
+- `standard` clarifies and organizes, adding a little detail where it's missing.
+- `strong` builds a rough idea into a fuller prompt with relevant context and sensible supporting steps.
 
-For example, Strong can turn `fix the login bug` into:
+At `strong`, `fix the login bug` might become:
 
 > Fix the login bug: trace the existing login flow, identify the root cause, and make a targeted fix. Verify the failing case and keep unrelated behavior unchanged.
 
-This is an illustrative target, not a promised model output. Supporting steps can strengthen the same goal; a repair need not become an audit, and a question must not become implementation. Every intensity preserves uncertainty, conditions, exclusions, explicit length limits, literal text, and recognizable personality. Strong need not preserve the draft's original brevity or lack of detail, but “keep it brief” and “nothing else” still win. Already-effective prompts can stay unchanged. These are editorial instructions, not a mathematical guarantee of model fidelity: review still matters.
+That shows the kind of rewrite Chisel aims for, not a promise about what your model will write.
 
-The optimizer instruction lives in [`src/optimizer-instruction.ts`](src/optimizer-instruction.ts).
+Every level keeps your goal, your uncertainty, conditions and exclusions, length limits, exact text like names and code, and how you sound. `strong` can make a short draft longer, but "keep it brief" still wins, and a question won't turn into a to-do list. If your prompt is already fine, the model can hand it back unchanged. The review then says **ALREADY GOOD**, and accepting does nothing.
+
+The full instruction is in [`src/optimizer-instruction.ts`](src/optimizer-instruction.ts). It's a set of editing rules, not a guarantee, so read the rewrite before you use it.
+
+### Models
+
+Chisel uses your current chat model unless you pin another with `/chisel-model`. A pin only affects Chisel, never your conversation. If the pinned model isn't available, Chisel tells you and uses the chat model for that pass.
+
+Requests go through Pi's own model registry, so Chisel uses the same credentials Pi would, including OAuth logins, provider headers, and custom base URLs. The OMP build does the same with OMP's registry.
+
+## Context
+
+A rewrite is better when it knows what you're working on, so Chisel sends a small, bounded amount of context with your draft, up to `contextTokenBudget` tokens. Your draft, the candidate being revised, and your notes always come first. Context gets whatever room is left.
+
+- **Workspace:** the project name, relative working directory, git branch, a manifest summary, the start of the README, top-level files and folders, and in-project guidance files the host already loaded. In a project you haven't trusted, Chisel uses only the directory and project name and reads no files.
+- **Session:** recent conversation, favoring what your draft refers to and your own messages over the assistant's. Summaries are labeled as lossy. Thinking, hidden entries, extension data, and tool output are left out (see [Tool excerpts](#tool-excerpts) for the opt-in).
+
+The `contextMode` setting controls how Chisel picks:
+
+- `auto` keeps what looks relevant to the draft. Drafts that point back at earlier work, like "do that again" or "as we discussed", get more history.
+- `recent` uses the recent conversation without the relevance filter.
+- `none` sends only your draft, plus the candidate and your notes on another pass.
+
+### See what gets sent
+
+The shortcut sends right away. To check the context first, turn on **Inspect before sending** in settings, or use `/chisel-context <draft>`. The inspector lists every source with the exact text that would go out. Uncheck what you don't want, then press **Enter**. Backing out sends nothing.
+
+![Context inspector before the first request, with four checked workspace sources and a preview of the selected one](docs/images/pi-chisel-context.svg)
+
+| Key | What it does |
+|---|---|
+| **↑** / **↓** | Pick a source. |
+| **Space** | Include or exclude it. |
+| **PgUp** / **PgDn**, **Home** / **End** | Scroll the excerpt. |
+| **0** | Uncheck everything and send the draft alone. |
+| **T** | Jump to tool excerpts. |
+| **Enter** | Generate. |
+| **Esc** | Go back and discard your changes. |
+
+Pressing **C** during review opens the same inspector for the next pass. It can't unsend earlier requests. Sources marked *supplied* are the ones used for the candidate you're looking at. Your choices last for that Chisel run, including retries, and unchecking a source never pulls in a replacement. If a different model or a longer revision leaves less room, Chisel shows the inspector again instead of quietly dropping sources.
+
+### Tool excerpts
+
+Chisel can include output from earlier tool calls in the session, but only the ones you check. It offers up to eight completed `bash`, `read`, `grep`, `find`, `ls`, `edit`, and `write` results from the last 64 session entries, all unchecked. You can pick up to three, totaling 512 tokens, within the overall budget. Each one shows its tool, the command or path, and whether the tool reported an error at the time.
+
+Unknown tools, results without their original call, and anything aimed at a credential-looking file (`.env`, `.npmrc`, SSH keys, and so on) are skipped. That filter isn't a secret scanner, so read an excerpt before you check it. Chisel never runs tools itself, and `none` mode turns tool excerpts off too.
 
 ## Privacy and safety
 
-Every generated pass sends the draft to the selected model provider. `auto` and `recent` also send the selected bounded context described above; tool excerpts require explicit opt-in. Revisions additionally send the current candidate and editing feedback. `none` excludes all reference evidence, not those user-controlled revision inputs. Provider-side retention is governed by the selected provider and account.
+Each pass sends your draft to your model's provider, along with the context you've allowed (none in `none` mode). Another pass also sends the current candidate and your notes. What the provider keeps depends on the provider and your account.
 
-Pi Chisel doesn't persist drafts, context, responses, credentials, or telemetry. Its provider request uses a fresh side-channel session ID, no tools, and no prompt caching, and it doesn't enter the conversation transcript or main agent loop.
+Chisel doesn't store drafts, context, responses, or credentials, and it has no telemetry. Each request is a one-off side call with a fresh session ID, no tools, and no prompt caching, and it never shows up in your conversation or the main agent loop.
 
-Additional safeguards:
+- **Esc** cancels a request immediately, and requests time out after 120 seconds.
+- An empty, malformed, cut-off, failed, unauthorized, or rate-limited response never touches your draft.
+- Replacing and restoring both check that the editor still holds the text Chisel expects. If you've typed something since, Chisel asks before overwriting it.
+- Context is marked to the model as untrusted data, not instructions, and terminal control characters are escaped before anything is displayed.
+- Chisel doesn't put absolute paths in the workspace summary, read guidance files outside the project, or follow symlinked metadata files. It isn't a redactor, though: sensitive text inside a file it does read can still be sent.
+- Only one Chisel run happens at a time. Reloading or quitting cancels it and closes its overlays.
 
-- Escape aborts the active request immediately; a 120-second timeout does the same.
-- Empty, malformed, truncated, errored, unauthenticated, rate-limited, and network-failed responses never replace the draft. Unchanged output is a valid no-op.
-- Dynamic terminal content is sanitized before rendering.
-- Workspace and session context are explicitly marked as untrusted evidence.
-- Concurrent invocations are rejected.
-- Replacement and restore both verify that the editor still contains the expected text before writing.
-- Shutdown and reload abort active work and dismiss temporary UI.
+## Development
 
-Chisel's overlays follow the host's selection keybindings (`tui.select.*`), so remapped confirm, cancel, and navigation keys work and appear in the key hints. Both integrations optimize the complete editor draft, not a selected range. The default **Ctrl+Shift+K** binding works in the verified host smoke tests, but a terminal or desktop environment may intercept it; change it through `/chisel-settings` if needed.
+The Pi and OMP builds live on separate branches, `pi` and `main`, because they compile against different host APIs. Everything host-specific is in `src/host.ts`, and the rest of `src/` is identical on both branches. Make a shared change on one branch, copy it to the other, and check that `git diff main pi -- src ':!src/host.ts'` prints nothing. Tests, fixtures, and packaging are per-branch.
 
-## Develop and test
+### Pi build
 
-The integrations have separate runtime branches because they compile against different host APIs. All host imports and host-specific behavior live in `src/host.ts`; every other file under `src/` is identical on both branches. Make shared changes on one branch and copy those files to the other, then check that `git diff main pi -- src ':!src/host.ts'` is empty. Tests, fixtures, and packaging stay branch-specific.
-
-### Pi checkout
+You need Node 22.19 or newer, Pi 0.87.1 or newer on your `PATH`, and Python 3 for the terminal smoke tests.
 
 ```bash
 git clone --branch pi https://github.com/feveromo/pi-chisel.git pi-chisel-pi
@@ -226,9 +181,11 @@ pi install .
 npm run validate
 ```
 
-The Pi validation suite runs formatting and lint checks, TypeScript, unit tests, package inspection, an isolated Pi PTY smoke test, and `npm run smoke:configured` against the linked checkout.
+`validate` runs Biome, TypeScript, the unit tests, the screenshot renderer's tests, and a package check. It then drives Pi in a pseudo-terminal with an isolated copy of Chisel, and finally runs `smoke:configured` against the checkout you linked with `pi install .`.
 
-### OMP checkout
+### OMP build
+
+You need Bun 1.3.14 or newer, npm, OMP 18.4.0, and Python 3.
 
 ```bash
 git clone https://github.com/feveromo/pi-chisel.git
@@ -239,8 +196,12 @@ npm run validate
 npm run smoke:configured
 ```
 
-The OMP validation suite also runs a production dependency audit, package inspection, an OMP 18.4.0 PTY smoke test, and a clean packaged-install smoke test.
+The OMP `validate` also audits production dependencies and smoke-tests a clean install of the packed plugin.
 
-The regression suite covers context selection, opt-in/exclusion, provider request boundaries, feedback cancellation, retry recovery, candidate history, no-op acceptance, and editor/shutdown races. Both PTY suites exercise preflight without transmission, context exclusion, feedback, failed/cancelled retries, candidate recovery, and review-before-replacement/no automatic submission. Twenty-five synthetic good/bad editorial examples and a human-review rubric are in [`docs/editorial-quality.md`](docs/editorial-quality.md). Deterministic tests are not live-model quality scores.
+### Tests
 
-Implementation details and verified host-specific hooks are documented in [`docs/architecture.md`](docs/architecture.md) on each runtime branch. Report vulnerabilities through [`SECURITY.md`](SECURITY.md). Pi Chisel is available under the [MIT License](LICENSE).
+Unit tests cover context selection, opt-in and exclusion, request boundaries, cancellation, retry recovery, candidate history, no-op acceptance, and races with the editor and shutdown. The smoke tests walk the real TUI through preflight, exclusion, feedback, failed and cancelled retries, and replacement, and check that nothing is submitted on its own.
+
+None of this measures rewrite quality. For that, [docs/editorial-quality.md](docs/editorial-quality.md) has 25 synthetic good and bad examples and a rubric for reviewing real output.
+
+[docs/architecture.md](docs/architecture.md) covers the host hooks each build relies on, and differs per branch. To report a vulnerability, see [SECURITY.md](SECURITY.md). Pi Chisel is MIT licensed; see [LICENSE](LICENSE).
