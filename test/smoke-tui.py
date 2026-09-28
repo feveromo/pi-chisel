@@ -96,7 +96,7 @@ else:
             "-e",
             str(ROOT / "test/fixtures/faux-provider.ts"),
             "-e",
-            str(ROOT / "src/index.ts"),
+            str(ROOT / "src/prompt-optimizer.ts"),
         ]
     )
 command.extend(
