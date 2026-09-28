@@ -226,6 +226,8 @@ if request_count() != 0:
     fail("Initial context inspection sent a provider request")
 capture.save("pi-chisel-context", "Before Chisel sends", "esc back")
 send(b"\x1b")
+# Keep Escape separate: a slow host can read "\x1b\x03" as ctrl+alt+c.
+pump(0.4)
 send(b"\x03")
 
 # Escape must cancel an active request and preserve the original editor draft.
