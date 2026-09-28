@@ -57,7 +57,16 @@ optimized_draft = os.environ.get(
     "OMP_CHISEL_SMOKE_RESULT",
     "Please make this clearer while preserving the exact intent.",
 )
-capture = TerminalCapture(os.environ.get("OMP_CHISEL_CAPTURE_DIR"), "OMP 17.2.11")
+capture_dir = os.environ.get("OMP_CHISEL_CAPTURE_DIR")
+# `omp --version` prints "omp/<version>"; label captures with the binary under test.
+version = (
+    subprocess.check_output([OMP, "--version"], text=True, timeout=10)
+    .strip()
+    .rpartition("/")[2]
+    if capture_dir
+    else ""
+)
+capture = TerminalCapture(capture_dir, f"OMP {version}")
 
 configured_runtime = os.environ.get("OMP_CHISEL_CONFIGURED") == "1"
 config_dir = None if configured_runtime else tempfile.mkdtemp(prefix="pi-chisel-smoke-")
@@ -108,7 +117,7 @@ else:
 command.extend(
     [
         "--model",
-        "prompt-optimizer-faux/faux-model",
+        "chisel-demo/scripted-model",
     ]
 )
 process = subprocess.Popen(
@@ -221,10 +230,10 @@ pump(0.2)
 # Preflight is a real transmission boundary, not a post-hoc privacy claim.
 send(b"/chisel-context inspect this draft")
 send(b"\r")
-wait_for("Before Chisel sends")
+wait_for("Chisel · before sending")
 if request_count() != 0:
     fail("Initial context inspection sent a provider request")
-capture.save("pi-chisel-context", "Before Chisel sends", "esc back")
+capture.save("pi-chisel-context", "Chisel · before sending", "esc back")
 send(b"\x1b")
 # Keep Escape separate: a slow host can read "\x1b\x03" as ctrl+alt+c.
 pump(0.4)
@@ -233,9 +242,9 @@ send(b"\x03")
 # Escape must cancel an active request and preserve the original editor draft.
 send(b"slow original")
 send(kitty_shortcut(shortcut))
-wait_for("Pi Chisel at Work")
+wait_for("Chisel · working")
 wait_for("Shaping a sharper prompt")
-capture.save("pi-chisel-invoking", "Pi Chisel at Work", "esc keep original")
+capture.save("pi-chisel-invoking", "Chisel · working", "esc keep original")
 send(b"\x1b")
 pump(0.5)
 if "Fresh off the Chisel" in decoded():
@@ -285,7 +294,7 @@ wait_for("ORIGINAL")
 
 # Context exclusion regenerates; feedback and failed/cancelled retries keep a candidate.
 send(b"c")
-wait_for("Context supplied")
+wait_for("context for the next pass")
 if request_count() != 2:
     fail("Opening the review inspector sent a request")
 send(b"0")

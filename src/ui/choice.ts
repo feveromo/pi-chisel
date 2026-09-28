@@ -1,6 +1,5 @@
 import type { Theme } from "../host.ts";
 import {
-	Container,
 	decodePrintableKey,
 	type SelectItem,
 	SelectList,
@@ -9,7 +8,11 @@ import {
 	Text,
 	type TUI,
 } from "../host.ts";
-import { accentBorder, sanitizeForDisplay, sanitizeInline } from "./frame.ts";
+import {
+	FramedContainer,
+	sanitizeForDisplay,
+	sanitizeInline,
+} from "./frame.ts";
 import { bindingLabel, keyHint, matchesBinding } from "./keys.ts";
 
 export interface ChoiceOption {
@@ -19,7 +22,7 @@ export interface ChoiceOption {
 	key?: string;
 }
 
-export class PromptChoiceComponent extends Container {
+export class PromptChoiceComponent extends FramedContainer {
 	readonly width = 72;
 	private readonly list: SelectList;
 
@@ -32,17 +35,9 @@ export class PromptChoiceComponent extends Container {
 		done: (value: string | undefined) => void,
 		escapeLabel = "cancel",
 	) {
-		super();
-		this.addChild(accentBorder(theme));
+		super(theme, `✦ ${title}`);
 		this.addChild(
-			new Text(
-				theme.fg("accent", theme.bold(`  ✦ ${sanitizeInline(title)}`)),
-				0,
-				0,
-			),
-		);
-		this.addChild(
-			new Text(theme.fg("text", `  ${sanitizeForDisplay(message)}`), 0, 0),
+			new Text(theme.fg("text", sanitizeForDisplay(message)), 0, 0),
 		);
 		this.addChild(new Spacer(1));
 
@@ -67,13 +62,12 @@ export class PromptChoiceComponent extends Container {
 			new Text(
 				theme.fg(
 					"dim",
-					`  ${bindingLabel("tui.select.up")}${bindingLabel("tui.select.down")} navigate · ${keyHint("tui.select.confirm", "select")} · ${keyHint("tui.select.cancel", sanitizeInline(escapeLabel))}`,
+					`${bindingLabel("tui.select.up")}${bindingLabel("tui.select.down")} navigate · ${keyHint("tui.select.confirm", "select")} · ${keyHint("tui.select.cancel", sanitizeInline(escapeLabel))}`,
 				),
 				0,
 				0,
 			),
 		);
-		this.addChild(accentBorder(theme));
 
 		const quickKeys = new Map<string, string>();
 		for (const option of options) {

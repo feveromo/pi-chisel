@@ -74,7 +74,13 @@ def render_svg(screen: Any, title: str, marker: str, footer: str) -> str:
     )
     if footer_row is None:
         raise ValueError(f"Screenshot footer not found: {footer!r}")
-    first_row = max(0, marker_row - 1)
+    # Chisel sets overlay titles into the top border; otherwise the frame is
+    # the row above the marker.
+    first_row = (
+        marker_row
+        if any(corner in display[marker_row] for corner in ("╭", "┌"))
+        else max(0, marker_row - 1)
+    )
     last_row = min(len(display) - 1, footer_row + 1)
     rows = display[first_row : last_row + 1]
     if any("\ufffd" in line for line in rows):
@@ -103,26 +109,6 @@ def render_svg(screen: Any, title: str, marker: str, footer: str) -> str:
         )
         if right is not None:
             first_column, last_column = left, right
-    else:
-        # Loaders have horizontal borders only; distinguish the accent line
-        # from underlying host rules by contiguous cells with the same color.
-        runs = []
-        start = 0
-        while start < screen.columns:
-            if top_row[start].data != "─":
-                start += 1
-                continue
-            end = start
-            while (
-                end + 1 < screen.columns
-                and top_row[end + 1].data == "─"
-                and top_row[end + 1].fg == top_row[start].fg
-            ):
-                end += 1
-            runs.append((start, end))
-            start = end + 1
-        if runs:
-            first_column, last_column = max(runs, key=lambda pair: pair[1] - pair[0])
     cell_width, line_height, padding, header = 8.8, 21, 22, 42
     width = round((last_column - first_column + 1) * cell_width + padding * 2)
     height = header + len(rows) * line_height + padding * 2

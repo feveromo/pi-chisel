@@ -108,12 +108,6 @@ export class ContextInspector implements Component {
 		const row = (s: string, color: "muted" | "warning" | "accent" = "muted") =>
 			wrapPlainText(s, inner).map((line) => ` ${theme.fg(color, line)}`);
 		const header = [
-			...row(
-				options.beforeFirstSend
-					? "✦ Before Chisel sends"
-					: "✦ Context supplied · next pass",
-				"accent",
-			),
 			...row(`Model: ${options.modelRef}`),
 			...row(
 				options.beforeFirstSend
@@ -195,6 +189,11 @@ export class ContextInspector implements Component {
 				...footer,
 			],
 			true,
+			{
+				title: options.beforeFirstSend
+					? "✦ Chisel · before sending"
+					: "✦ Chisel · context for the next pass",
+			},
 		);
 	}
 	invalidate(): void {}

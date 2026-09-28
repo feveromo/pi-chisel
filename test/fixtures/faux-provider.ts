@@ -11,9 +11,9 @@ import {
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 
 let optimizationCount = 0;
-const PROVIDER = "prompt-optimizer-faux";
-const MODEL = "faux-model";
-const API = "prompt-optimizer-faux-api";
+const PROVIDER = "chisel-demo";
+const MODEL = "scripted-model";
+const API = "chisel-demo-api";
 
 function textFromLastUser(context: Context): string {
 	const message = [...context.messages]
@@ -154,7 +154,7 @@ export default function fauxProvider(pi: ExtensionAPI): void {
 		models: [
 			{
 				id: MODEL,
-				name: "Pi Chisel Faux Model",
+				name: "Chisel scripted model",
 				reasoning: false,
 				input: ["text"],
 				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },

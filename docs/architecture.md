@@ -36,9 +36,9 @@ The shortcut captures the editor text without submitting it. The slash-command f
 The UI is built from canonical OMP exports:
 
 - `@oh-my-pi/pi-tui`: `Container`, `Text`, `Input`, `SelectList`, `SettingsList`, `CancellableLoader`, printable-key decoding, matching, and truncation.
-- `@oh-my-pi/pi-coding-agent`: `DynamicBorder`, `Theme`, extension context types, model registry types, and settings-list theming.
+- `@oh-my-pi/pi-coding-agent`: `Theme`, extension context types, model registry types, and settings-list theming.
 
-All views are transient. Generation shows **Pi Chisel at Work**; review shows **Fresh off the Chisel**; replacement shows **Chiseled draft ready**. Escape reaches the focused component, aborts the provider stream, and resolves the custom UI call without changing the editor.
+All views are transient and share one rounded frame (`src/ui/frame.ts`) with the title set into the top border, capped at 100 columns so prompt text stays readable. Generation shows **Chisel · working**; review shows **Fresh off the Chisel**; replacement shows **Chiseled draft ready**. Escape reaches the focused component, aborts the provider stream, and resolves the custom UI call without changing the editor.
 
 ## Grounding context
 

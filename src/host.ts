@@ -35,7 +35,6 @@ export type {
 	UserMessage,
 } from "@oh-my-pi/pi-ai";
 export {
-	DynamicBorder,
 	type ExtensionAPI,
 	type ExtensionCommandContext,
 	type ExtensionContext,

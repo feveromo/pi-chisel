@@ -1,15 +1,11 @@
 import {
-	DynamicBorder,
+	Container,
 	type Theme,
 	truncateLine,
 	truncateToWidth,
 	visibleWidth,
 	wrapTextWithAnsi,
 } from "../host.ts";
-
-export function accentBorder(theme: Theme): DynamicBorder {
-	return new DynamicBorder((text: string) => theme.fg("borderAccent", text));
-}
 
 export function sanitizeForDisplay(text: string): string {
 	let sanitized = "";
@@ -37,17 +33,64 @@ export function wrapPlainText(text: string, width: number): string[] {
 	return wrapTextWithAnsi(safe, Math.max(1, width));
 }
 
+export interface FrameLabels {
+	/** Shown at the left of the top border. */
+	title?: string;
+	/** Shown at the right of the bottom border, such as a scroll position. */
+	status?: string;
+}
+
+/** A border edge with an optional label set into it: `╭─ label ────╮`. */
+function frameEdge(
+	theme: Theme,
+	borderColor: "border" | "borderAccent",
+	innerWidth: number,
+	corners: [string, string],
+	label: string | undefined,
+	labelAtEnd: boolean,
+): string {
+	const border = (text: string) => theme.fg(borderColor, text);
+	const fitted =
+		label && innerWidth >= 6
+			? truncateLine(sanitizeInline(label), innerWidth - 4)
+			: "";
+	if (!fitted)
+		return border(`${corners[0]}${"─".repeat(innerWidth)}${corners[1]}`);
+	const styled = labelAtEnd
+		? theme.fg("dim", fitted)
+		: theme.fg("accent", theme.bold(fitted));
+	const rest = "─".repeat(innerWidth - visibleWidth(fitted) - 3);
+	return labelAtEnd
+		? `${border(`${corners[0]}${rest} `)}${styled}${border(` ─${corners[1]}`)}`
+		: `${border(`${corners[0]}─ `)}${styled}${border(` ${rest}${corners[1]}`)}`;
+}
+
 export function overlayFrame(
 	theme: Theme,
 	width: number,
 	body: string[],
 	accent = false,
+	labels: FrameLabels = {},
 ): string[] {
 	const actualWidth = Math.max(8, width);
 	const innerWidth = actualWidth - 2;
 	const borderColor = accent ? "borderAccent" : "border";
-	const top = theme.fg(borderColor, `╭${"─".repeat(innerWidth)}╮`);
-	const bottom = theme.fg(borderColor, `╰${"─".repeat(innerWidth)}╯`);
+	const top = frameEdge(
+		theme,
+		borderColor,
+		innerWidth,
+		["╭", "╮"],
+		labels.title,
+		false,
+	);
+	const bottom = frameEdge(
+		theme,
+		borderColor,
+		innerWidth,
+		["╰", "╯"],
+		labels.status,
+		true,
+	);
 	const rows = body.map((content) => {
 		const normalized =
 			visibleWidth(content) > innerWidth
@@ -57,4 +100,25 @@ export function overlayFrame(
 		return `${theme.fg(borderColor, "│")}${padded}${theme.fg(borderColor, "│")}`;
 	});
 	return [top, ...rows, bottom];
+}
+
+/** Native host components laid out inside Chisel's titled overlay frame. */
+export class FramedContainer extends Container {
+	constructor(
+		private readonly frameTheme: Theme,
+		private readonly title: string,
+	) {
+		super();
+	}
+
+	override render(width: number): string[] {
+		const inner = Math.max(1, width - 4);
+		return overlayFrame(
+			this.frameTheme,
+			width,
+			super.render(inner).map((line) => ` ${line}`),
+			true,
+			{ title: this.title },
+		);
+	}
 }
