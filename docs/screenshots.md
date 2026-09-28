@@ -30,7 +30,7 @@ Review all four SVGs in a browser at README width before copying them into `docs
 
 ## Package catalog preview
 
-`docs/images/pi-chisel-review.png` is a 2x (1602 x 844) raster export of the review
+`docs/images/pi-chisel-review.png` is a 2x (1602 x 802) raster export of the review
 SVG for the catalog's `pi.image` metadata. Export with librsvg to preserve the
 terminal-cell text placement, fonts, and frame paths. On a Linux host with Python
 GObject, Cairo, librsvg, and DejaVu Sans Mono installed:
@@ -41,7 +41,7 @@ import cairo, gi
 gi.require_version('Rsvg', '2.0')
 from gi.repository import Rsvg
 handle = Rsvg.Handle.new_from_file('docs/images/pi-chisel-review.svg')
-width, height = 1602, 844
+width, height = 1602, 802
 surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
 viewport = Rsvg.Rectangle()
 viewport.x = viewport.y = 0
