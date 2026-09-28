@@ -92,6 +92,9 @@ if configured_runtime:
 else:
     command.extend(
         [
+            # Trust the checkout for this run only, so a clean HOME (such as CI)
+            # does not stop at the project-trust prompt.
+            "--approve",
             "--no-extensions",
             "-e",
             str(ROOT / "test/fixtures/faux-provider.ts"),
