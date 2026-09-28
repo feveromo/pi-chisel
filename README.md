@@ -70,7 +70,7 @@ The older pinned release remains available as `@pi-v0.1.0`; it does not contain 
 
 ### OMP integration
 
-The secondary OMP integration is verified against OMP **18.3.5** and its canonical `@oh-my-pi/*` APIs. Later OMP versions may work but aren't part of the tested compatibility boundary. Configure a model through `/login` or `/model`, then install:
+The secondary OMP integration is verified against OMP **18.4.0** and its canonical `@oh-my-pi/*` APIs. Later OMP versions may work but aren't part of the tested compatibility boundary. Configure a model through `/login` or `/model`, then install:
 
 ```bash
 omp plugin install github:feveromo/pi-chisel
@@ -237,7 +237,7 @@ npm run validate
 npm run smoke:configured
 ```
 
-The OMP validation suite also runs a production dependency audit, package inspection, an OMP 18.3.5 PTY smoke test, and a clean packaged-install smoke test.
+The OMP validation suite also runs a production dependency audit, package inspection, an OMP 18.4.0 PTY smoke test, and a clean packaged-install smoke test.
 
 The regression suite covers context selection, opt-in/exclusion, provider request boundaries, feedback cancellation, retry recovery, candidate history, no-op acceptance, and editor/shutdown races. Both PTY suites exercise preflight without transmission, context exclusion, feedback, failed/cancelled retries, candidate recovery, and review-before-replacement/no automatic submission. Twenty-five synthetic good/bad editorial examples and a human-review rubric are in [`docs/editorial-quality.md`](docs/editorial-quality.md). Deterministic tests are not live-model quality scores.
 
