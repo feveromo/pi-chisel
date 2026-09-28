@@ -40,9 +40,15 @@ Captured from native Pi **0.85.0** using a deterministic faux provider and synth
 
 ### Pi
 
-The native Pi package targets `@earendil-works/pi-coding-agent` **0.84.1**, with TUI smoke tests on **0.84.1** and **0.85.0**. Configure a model through `/login` or `/model`.
+This checkout requires Pi **0.87.1 or newer**, with typechecks, provider-boundary tests, and the isolated TUI smoke test verified on **0.87.1**. Configure a model through `/login` or `/model`.
 
-Install the current native integration from its runtime branch:
+Install the native Pi integration from npm:
+
+```bash
+pi install npm:pi-chisel
+```
+
+Alternatively, install from its runtime branch:
 
 ```bash
 pi install git:github.com/feveromo/pi-chisel@pi
@@ -57,7 +63,7 @@ pi list
 Try Pi Chisel for one session without installing it:
 
 ```bash
-pi -e git:github.com/feveromo/pi-chisel@pi
+pi -e npm:pi-chisel
 ```
 
 The older pinned release remains available as `@pi-v0.1.0`; it does not contain the improvements documented here.
@@ -204,7 +210,7 @@ Additional safeguards:
 - Replacement and restore both verify that the editor still contains the expected text before writing.
 - Shutdown and reload abort active work and dismiss temporary UI.
 
-Pi 0.84.1 and OMP 17.2.11 expose the whole editor buffer but no selection or cursor-range operation, so both integrations optimize the complete draft. The default **Ctrl+Shift+K** binding is unclaimed by both verified host versions, but a terminal or desktop environment may intercept it; change it through `/prompt-optimize-settings` if needed.
+Both integrations optimize the complete editor draft, not a selected range. The default **Ctrl+Shift+K** binding works in the verified host smoke tests, but a terminal or desktop environment may intercept it; change it through `/prompt-optimize-settings` if needed.
 
 ## Develop and test
 

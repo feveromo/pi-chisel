@@ -27,3 +27,29 @@ Keep capture runs isolated (do not set `PI_CHISEL_CONFIGURED` / `OMP_CHISEL_CONF
 Only `pyte` is needed for capture, via the one-off `uv` command; no Python dependency is added to the extension. The standard-library regressions run with `npm run test:capture` and are included in `npm run validate`.
 
 Review all four SVGs in a browser at README width before copying them into `docs/images/`. Check the original/rewrite text, complete action rows, frame joins, Unicode arrows, and the pre-send notice. Both runtime branches carry the same native Pi README images; OMP can generate its own captures for host-specific review. Keep the README's host/version and synthetic-provider disclaimer accurate when updating them.
+
+## Package catalog preview
+
+`docs/images/pi-chisel-review.png` is a 2x (1602 x 844) raster export of the review
+SVG for the catalog's `pi.image` metadata. Export with librsvg to preserve the
+terminal-cell text placement, fonts, and frame paths. On a Linux host with Python
+GObject, Cairo, librsvg, and DejaVu Sans Mono installed:
+
+```bash
+/usr/bin/python3 - <<'PY'
+import cairo, gi
+gi.require_version('Rsvg', '2.0')
+from gi.repository import Rsvg
+handle = Rsvg.Handle.new_from_file('docs/images/pi-chisel-review.svg')
+width, height = 1602, 844
+surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+viewport = Rsvg.Rectangle()
+viewport.x = viewport.y = 0
+viewport.width, viewport.height = width, height
+assert handle.render_document(cairo.Context(surface), viewport)
+surface.write_to_png('docs/images/pi-chisel-review.png')
+PY
+```
+
+Inspect the PNG before publishing. The version-pinned public image URL is
+documented in [publishing.md](publishing.md).
