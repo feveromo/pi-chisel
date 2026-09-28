@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="801" height="422" viewBox="0 0 801 422" role="img">
-<title>review / Pi 0.85.0</title>
+<title>review / Pi 0.87.1</title>
 <rect x="0.5" y="0.5" width="800" height="421" rx="12" fill="#0b0f14" stroke="#273142"/>
 <text x="22" y="26" fill="#c099ff" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">PI CHISEL</text>
-<text x="779" y="26" text-anchor="end" fill="#8b98ad" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">review / Pi 0.85.0</text>
+<text x="779" y="26" text-anchor="end" fill="#8b98ad" font-family="DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">review / Pi 0.87.1</text>
 <path d="M 0 42 H 801" stroke="#273142"/>
 <path d="M 26.4 74.5 L 30.8 74.5 M 26.4 74.5 L 26.4 85.0" fill="none" stroke="#00d7ff" stroke-width="1"/>
 <path d="M 35.2 74.5 L 30.8 74.5 M 35.2 74.5 L 39.6 74.5" fill="none" stroke="#00d7ff" stroke-width="1"/>
