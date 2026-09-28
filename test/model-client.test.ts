@@ -3,11 +3,16 @@ import {
 	type AssistantMessage,
 	type Context,
 	createAssistantMessageEventStream,
+	fauxAssistantMessage,
+	fauxProvider,
+	getSystemMessageText,
+	InMemoryCredentialStore,
+	InMemoryModelsStore,
 	type Model,
 	type Provider,
 	type SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
-import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
+import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
 import {
 	PromptOptimizationCancelledError,
@@ -85,14 +90,12 @@ function harness(response: AssistantMessage) {
 	);
 	const provider = { streamSimple } as unknown as Provider;
 	const registry = {
+		streamSimple,
 		getProvider: () => provider,
 		getApiKeyAndHeaders: async () => ({
 			ok: true as const,
 			apiKey: "resolved-by-pi",
 			headers: { "x-test": "1" },
-		}),
-		getProviderAuth: async () => ({
-			auth: { baseUrl: "https://credential-specific.example" },
 		}),
 	} as unknown as ModelRegistry;
 	return {
@@ -105,6 +108,41 @@ function harness(response: AssistantMessage) {
 }
 
 describe("prompt optimizer model client", () => {
+	it("normalizes system instructions through the real Pi model registry", async () => {
+		const runtime = await ModelRuntime.create({
+			credentials: new InMemoryCredentialStore(),
+			modelsStore: new InMemoryModelsStore(),
+			modelsPath: null,
+			refreshOnCreate: false,
+		});
+		const faux = fauxProvider({ provider: "chisel-test" });
+		runtime.registerNativeProvider(faux.provider);
+		faux.setResponses([
+			(context) => {
+				expect(context).not.toHaveProperty("systemPrompt");
+				expect(context.messages.map((message) => message.role)).toEqual([
+					"system",
+					"user",
+				]);
+				const first = context.messages[0];
+				if (first?.role !== "system")
+					throw new Error("Missing system instructions");
+				expect(getSystemMessageText(first)).toContain("prompt editor");
+				return fauxAssistantMessage("A clearer prompt");
+			},
+		]);
+		await expect(
+			runPromptOptimization({
+				model: faux.getModel(),
+				modelRegistry: new ModelRegistry(runtime),
+				draft: "make this clear",
+				intensity: "standard",
+				signal: new AbortController().signal,
+			}),
+		).resolves.toBe("A clearer prompt");
+		expect(faux.state.callCount).toBe(1);
+	});
+
 	it("uses Pi's registered provider and resolved auth without adding session messages", async () => {
 		const test = harness(assistant("```text\nA clearer prompt\n```"));
 		const result = await runPromptOptimization({
@@ -117,9 +155,6 @@ describe("prompt optimizer model client", () => {
 
 		expect(result).toBe("A clearer prompt");
 		expect(test.streamSimple).toHaveBeenCalledOnce();
-		expect(test.getModel()?.baseUrl).toBe(
-			"https://credential-specific.example",
-		);
 		expect(test.getOptions()).toMatchObject({
 			apiKey: "resolved-by-pi",
 			cacheRetention: "none",
