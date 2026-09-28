@@ -1,13 +1,13 @@
+import type { OptimizerIntensity } from "./config.ts";
 import {
 	type Api,
 	type AssistantMessage,
 	type AssistantMessageEventStream,
-	type Effort,
+	HOST_NAME,
 	type Model,
-	streamSimple,
-} from "@oh-my-pi/pi-ai";
-import type { ModelRegistry } from "@oh-my-pi/pi-coding-agent";
-import type { OptimizerIntensity } from "./config.ts";
+	type ModelRegistry,
+	streamOptimizerModel,
+} from "./host.ts";
 import type {
 	OptimizationReference,
 	OptimizationRevision,
@@ -45,6 +45,7 @@ export interface RunPromptOptimizationOptions {
 	revision?: OptimizationRevision;
 	intensity: OptimizerIntensity;
 	signal: AbortSignal;
+	timeoutMs?: number;
 	onTextDelta?: (totalCharacters: number) => void;
 }
 
@@ -54,20 +55,6 @@ function responseText(response: AssistantMessage): string {
 		if (block.type === "text") text += block.text;
 	}
 	return text;
-}
-
-function resolveRequestModel(
-	model: Model<Api>,
-	modelRegistry: ModelRegistry,
-): Model<Api> {
-	const baseUrl =
-		modelRegistry.getProviderBaseUrl(model.provider) ?? model.baseUrl;
-	return baseUrl ? { ...model, baseUrl } : model;
-}
-
-function lowestReasoningEffort(model: Model<Api>): Effort | undefined {
-	if (!model.reasoning) return undefined;
-	return model.thinking?.efforts[0];
 }
 
 async function consumeOptimizationStream(
@@ -139,15 +126,6 @@ export async function runPromptOptimization(
 		signal,
 		onTextDelta,
 	} = options;
-	if (!modelRegistry.hasProvider(model.provider))
-		throw new PromptOptimizationError(
-			`OMP no longer has provider “${model.provider}”.`,
-		);
-
-	const requestModel = resolveRequestModel(model, modelRegistry);
-	const reasoning = lowestReasoningEffort(requestModel);
-	const sessionId = crypto.randomUUID();
-	const headers = modelRegistry.getProviderHeaders(model.provider);
 	if (signal.aborted) throw new PromptOptimizationCancelledError();
 
 	const request = buildOptimizationRequest(
@@ -175,18 +153,13 @@ export async function runPromptOptimization(
 
 	let stream: AssistantMessageEventStream;
 	try {
-		stream = streamSimple(requestModel, request.context, {
-			...(!model.reasoning ? { temperature: 0.2 } : {}),
-			...(reasoning ? { reasoning } : {}),
-			apiKey: modelRegistry.resolver(requestModel, sessionId),
-			...(headers ? { headers } : {}),
+		stream = await streamOptimizerModel(model, modelRegistry, request.context, {
 			signal,
 			maxTokens,
-			cacheRetention: "none",
-			sessionId,
-			codexSseMaxAttempts: 1,
+			timeoutMs: options.timeoutMs ?? OPTIMIZER_REQUEST_TIMEOUT_MS,
 		});
 	} catch (error) {
+		if (signal.aborted) throw new PromptOptimizationCancelledError();
 		throw new PromptOptimizationError(
 			error instanceof Error ? error.message : String(error),
 		);
@@ -205,7 +178,7 @@ export function friendlyOptimizationError(error: unknown): string {
 	if (/429|rate.?limit/i.test(message))
 		return "Chisel's model is rate-limited. Your original draft is still untouched.";
 	if (/401|403|unauth|api key|credential|login/i.test(message)) {
-		return `OMP could not authenticate Chisel's model: ${message}`;
+		return `${HOST_NAME} could not authenticate Chisel's model: ${message}`;
 	}
 	if (/network|fetch|socket|econn|enotfound|timed?\s*out/i.test(message)) {
 		return `Chisel could not reach the provider: ${message}`;

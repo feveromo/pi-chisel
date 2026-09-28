@@ -34,8 +34,8 @@ plugin_path=$(jq -er '
   | select(.name == "pi-chisel" and .enabled == true)
   | .path
 ' "$output")
-configured_entry=$(realpath "$plugin_path/src/index.ts")
-working_entry=$(realpath "$root/src/index.ts")
+configured_entry=$(realpath "$plugin_path/src/prompt-optimizer.ts")
+working_entry=$(realpath "$root/src/prompt-optimizer.ts")
 if [[ "$configured_entry" != "$working_entry" ]]; then
 	printf 'Configured OMP plugin resolves to %s, expected %s\n' \
 		"$configured_entry" "$working_entry" >&2

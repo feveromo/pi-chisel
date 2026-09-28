@@ -33,6 +33,7 @@ const TEST_MODEL: Model<Api> = {
 	contextWindow: 128_000,
 	maxTokens: 4096,
 	compat: {} as Model<Api>["compat"],
+	identity: {} as Model<Api>["identity"],
 };
 
 const CURRENT_REASONING_MODEL: Model<Api> = {
@@ -73,7 +74,10 @@ function assistant(
 	};
 }
 
-function harness(response: AssistantMessage) {
+function harness(
+	response: AssistantMessage,
+	apiKey: string | undefined = "key",
+) {
 	let seenModel: Model<Api> | undefined;
 	let seenContext: Context | undefined;
 	let seenOptions: SimpleStreamOptions | undefined;
@@ -100,7 +104,9 @@ function harness(response: AssistantMessage) {
 	const registry = {
 		hasProvider: () => true,
 		getProviderBaseUrl: () => "https://credential-specific.example",
-		getProviderHeaders: () => ({ "x-test": "1" }),
+		getApiKey: async () => apiKey,
+		// OMP 18 resolves configured headers asynchronously.
+		resolveModelHeaders: async () => ({ "x-test": "1" }),
 		resolver: () => credentialResolver,
 	} as unknown as ModelRegistry;
 	return {
@@ -141,6 +147,20 @@ describe("prompt optimizer model client", () => {
 		expect(test.getContext()?.systemPrompt?.join("\n")).toContain(
 			"prompt editor",
 		);
+	});
+
+	it("reports missing credentials before starting a provider request", async () => {
+		const test = harness(assistant("unused"), "");
+		await expect(
+			runPromptOptimization({
+				model: TEST_MODEL,
+				modelRegistry: test.registry,
+				draft: "make this clear",
+				intensity: "standard",
+				signal: new AbortController().signal,
+			}),
+		).rejects.toThrow('No API key found for "test-provider"');
+		expect(test.providerStream).not.toHaveBeenCalled();
 	});
 
 	it("uses the lowest effort supported by the current reasoning model", async () => {

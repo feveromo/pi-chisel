@@ -1,4 +1,3 @@
-import type { SessionEntry } from "@oh-my-pi/pi-coding-agent";
 import type { ContextMode } from "./config.ts";
 import { analyzeDraft } from "./draft-analysis.ts";
 import {
@@ -7,6 +6,7 @@ import {
 	referenceTerms,
 	relevance,
 } from "./evidence.ts";
+import type { SessionEntry } from "./host.ts";
 import {
 	type ContextSource,
 	type ConversationReference,

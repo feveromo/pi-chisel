@@ -1,15 +1,16 @@
-import type { Theme } from "@oh-my-pi/pi-coding-agent";
+import type { PreviewMode } from "../config.ts";
+import type { Theme } from "../host.ts";
 import {
 	type Component,
 	decodePrintableKey,
 	matchesKey,
 	type TUI,
 	wrapTextWithAnsi,
-} from "@oh-my-pi/pi-tui";
-import type { PreviewMode } from "../config.ts";
+} from "../host.ts";
 import { createPromptDiff, type PromptDiff } from "./diff.ts";
 import { renderPromptDiffView } from "./diff-render.ts";
 import { overlayFrame, sanitizeInline, wrapPlainText } from "./frame.ts";
+import { bindingLabel, keyHint, matchesBinding } from "./keys.ts";
 import { clampViewportOffset, sliceViewport } from "./viewport.ts";
 
 function rawKeyHint(key: string, description: string): string {
@@ -31,12 +32,6 @@ export interface ReviewPosition {
 type ReviewView = PreviewMode | "diff";
 
 const PREVIEW_ROWS = 11;
-const SCROLL_KEYS = [
-	["up", -1],
-	["down", 1],
-	["pageUp", -PREVIEW_ROWS],
-	["pageDown", PREVIEW_ROWS],
-] as const;
 const REVIEW_ACTION_BY_KEY: Readonly<Record<string, ReviewAction>> = {
 	a: "accept",
 	e: "edit",
@@ -88,11 +83,11 @@ export class PromptReviewComponent implements Component {
 	}
 
 	private handleControlInput(data: string): boolean {
-		if (matchesKey(data, "escape")) {
+		if (matchesBinding(data, "tui.select.cancel")) {
 			this.options.onAction("cancel");
 			return true;
 		}
-		if (matchesKey(data, "enter")) {
+		if (matchesBinding(data, "tui.select.confirm")) {
 			this.options.onAction("accept");
 			return true;
 		}
@@ -100,15 +95,9 @@ export class PromptReviewComponent implements Component {
 			this.cycleView();
 			return true;
 		}
-		for (const [key, delta] of SCROLL_KEYS) {
-			if (!matchesKey(data, key)) continue;
-			this.scrollBy(
-				key === "pageUp"
-					? -this.previewRows
-					: key === "pageDown"
-						? this.previewRows
-						: delta,
-			);
+		const step = this.scrollStep(data);
+		if (step !== 0) {
+			this.scrollBy(step);
 			return true;
 		}
 		if (matchesKey(data, "home")) {
@@ -120,6 +109,14 @@ export class PromptReviewComponent implements Component {
 			return true;
 		}
 		return false;
+	}
+
+	private scrollStep(data: string): number {
+		if (matchesBinding(data, "tui.select.up")) return -1;
+		if (matchesBinding(data, "tui.select.down")) return 1;
+		if (matchesBinding(data, "tui.select.pageUp")) return -this.previewRows;
+		if (matchesBinding(data, "tui.select.pageDown")) return this.previewRows;
+		return 0;
 	}
 
 	private handleShortcutKey(key: string): void {
@@ -274,13 +271,13 @@ export class PromptReviewComponent implements Component {
 			const first = viewport.offset + 1;
 			const last = viewport.offset + viewport.items.length;
 			body.push(
-				` ${this.theme.fg("muted", `Rows ${first}–${last} of ${viewport.total} · ↑↓ or PgUp/PgDn scroll`)}`,
+				` ${this.theme.fg("muted", `Rows ${first}–${last} of ${viewport.total} · ${bindingLabel("tui.select.up")}${bindingLabel("tui.select.down")} or ${bindingLabel("tui.select.pageUp")}/${bindingLabel("tui.select.pageDown")} scroll`)}`,
 			);
 		}
 
-		const primary = `${rawKeyHint("enter", "use this")}  ${rawKeyHint("e", "tune it")}  ${rawKeyHint("tab", this.tabLabel())}`;
+		const primary = `${keyHint("tui.select.confirm", "use this")}  ${rawKeyHint("e", "tune it")}  ${rawKeyHint("tab", this.tabLabel())}`;
 		const secondary = `${rawKeyHint("r", "another pass")}  ${rawKeyHint("c", "context")}  ${rawKeyHint("m", "switch model")}${this.options.hasPrevious ? "  b previous candidate" : ""}`;
-		const exit = rawKeyHint("esc", "keep original");
+		const exit = keyHint("tui.select.cancel", "keep original");
 		const primaryRows = wrapTextWithAnsi(
 			this.theme.fg("accent", primary),
 			inner,

@@ -1,5 +1,3 @@
-import type { Api, Model } from "@oh-my-pi/pi-ai";
-import type { ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 import type { OptimizerConfig } from "./config.ts";
 import {
 	buildConversationReference,
@@ -7,6 +5,13 @@ import {
 	toolEvidenceCandidates,
 } from "./context-builder.ts";
 import { analyzeDraft } from "./draft-analysis.ts";
+import {
+	type Api,
+	type ExtensionContext,
+	type Model,
+	sessionEntries,
+	systemPromptText,
+} from "./host.ts";
 import { calculateContextBudgetForModel } from "./model-selection.ts";
 import { buildWorkspaceReference } from "./project-context.ts";
 import {
@@ -26,7 +31,7 @@ export interface OptimizationGrounding {
 
 type GroundingExtensionContext = Pick<
 	ExtensionContext,
-	"cwd" | "getSystemPrompt" | "sessionManager"
+	"cwd" | "getSystemPrompt" | "isProjectTrusted" | "sessionManager"
 >;
 
 const REFERENCE_WRAPPER_RESERVE_TOKENS = 160;
@@ -108,7 +113,7 @@ export async function buildOptimizationGrounding(
 	if (totalBudget <= 0)
 		return { summary: "draft only · context window is full" };
 
-	const entries = ctx.sessionManager.getBranch();
+	const entries = sessionEntries(ctx);
 	const hasSessionEvidence = extractVisibleContextItems(entries).length > 0;
 	const workspaceLimit = hasSessionEvidence
 		? Math.min(MAX_WORKSPACE_TOKENS_WITH_SESSION, Math.floor(totalBudget * 0.4))
@@ -116,14 +121,20 @@ export async function buildOptimizationGrounding(
 
 	let systemPrompt = "";
 	try {
-		systemPrompt = ctx.getSystemPrompt().join("\n\n");
+		systemPrompt = systemPromptText(ctx);
 	} catch {
 		// Workspace extraction still works if the runtime prompt is unavailable.
+	}
+	let trusted = false;
+	try {
+		trusted = ctx.isProjectTrusted();
+	} catch {
+		// Treat an unknown trust state as untrusted.
 	}
 	const workspace = await buildWorkspaceReference({
 		cwd: ctx.cwd,
 		systemPrompt,
-		trusted: true,
+		trusted,
 		tokenBudget: workspaceLimit,
 		...(config.contextMode === "auto" ? { draft } : {}),
 	});

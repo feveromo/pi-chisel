@@ -44,7 +44,7 @@ if (!plugin?.path) {
 process.stdout.write(plugin.path);
 NODE
 )
-installed_entry=$(realpath "$installed_path/src/index.ts")
+installed_entry=$(realpath "$installed_path/src/prompt-optimizer.ts")
 if [[ "$installed_entry" != "$temporary_root"/* ]]; then
 	printf 'Packaged plugin resolved outside the clean install: %s\n' "$installed_entry" >&2
 	exit 1

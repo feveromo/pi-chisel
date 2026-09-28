@@ -22,6 +22,7 @@ function model(provider: string, id: string): Model<Api> {
 		contextWindow: 20_000,
 		maxTokens: 4096,
 		compat: {} as Model<Api>["compat"],
+		identity: {} as Model<Api>["identity"],
 	};
 }
 

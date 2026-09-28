@@ -1,17 +1,18 @@
-import { getSettingsListTheme, type Theme } from "@oh-my-pi/pi-coding-agent";
+import type { OptimizerConfig } from "../config.ts";
 import {
 	Container,
 	decodePrintableKey,
+	getSettingsListTheme,
 	type KeybindingsConfig,
-	matchesKey,
 	type SettingItem,
 	SettingsList,
 	Spacer,
 	Text,
+	type Theme,
 	type TUI,
-} from "@oh-my-pi/pi-tui";
-import type { OptimizerConfig } from "../config.ts";
-import { sanitizeInline } from "./frame.ts";
+} from "../host.ts";
+import { accentBorder, sanitizeInline } from "./frame.ts";
+import { keyHint, matchesBinding } from "./keys.ts";
 
 export type SettingsAction = "close" | "model" | "shortcut";
 
@@ -78,7 +79,7 @@ export class OptimizerSettingsComponent extends Container {
 			},
 		];
 
-		this.addChild(new Text(theme.fg("borderAccent", "─".repeat(40)), 0, 0));
+		this.addChild(accentBorder(theme));
 		this.addChild(
 			new Text(theme.fg("accent", theme.bold("  ✦ Pi Chisel settings")), 0, 0),
 		);
@@ -119,13 +120,13 @@ export class OptimizerSettingsComponent extends Container {
 			new Text(
 				theme.fg(
 					"dim",
-					"  m choose model · k change shortcut · esc save and close",
+					`  m choose model · k change shortcut · ${keyHint("tui.select.cancel", "save and close")}`,
 				),
 				0,
 				0,
 			),
 		);
-		this.addChild(new Text(theme.fg("borderAccent", "─".repeat(40)), 0, 0));
+		this.addChild(accentBorder(theme));
 
 		this.finish = (action: SettingsAction) =>
 			done({ action, config: this.working, resolvedKeybindings });
@@ -134,7 +135,7 @@ export class OptimizerSettingsComponent extends Container {
 	private readonly finish: (action: SettingsAction) => void;
 
 	handleInput(data: string): void {
-		if (matchesKey(data, "escape")) {
+		if (matchesBinding(data, "tui.select.cancel")) {
 			this.finish("close");
 			return;
 		}

@@ -20,13 +20,20 @@ function textFromLastUser(context: Context): string {
 		.reverse()
 		.find((candidate) => candidate.role === "user");
 	if (!message) return "";
-	if (typeof message.content === "string") return message.content;
-	return message.content
-		.filter(
-			(block): block is { type: "text"; text: string } => block.type === "text",
-		)
-		.map((block) => block.text)
-		.join("\n");
+	const text =
+		typeof message.content === "string"
+			? message.content
+			: message.content
+					.filter(
+						(block): block is { type: "text"; text: string } =>
+							block.type === "text",
+					)
+					.map((block) => block.text)
+					.join("\n");
+	// OMP 18 prepends date/cwd reminders to the user turn; echo only the draft.
+	return text
+		.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "")
+		.trim();
 }
 
 function response(
