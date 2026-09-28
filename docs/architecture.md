@@ -77,7 +77,7 @@ OMP's source-loaded extension graph and bundled host currently keep separate cus
 
 ## Review, inspection, and revision state
 
-The default shortcut generates immediately. `inspectContext: true` or `/prompt-optimize-context <draft>` opens `src/ui/context.ts` before any provider call. The inspector previews the same bounded source text used by request construction (terminal-sanitized for display), and names the provider/model. Escape from initial preflight sends nothing. Review's **C** control edits the next request and explicitly warns that previous requests cannot be unsent.
+The default shortcut generates immediately. `inspectContext: true` or `/chisel-context <draft>` opens `src/ui/context.ts` before any provider call. The inspector previews the same bounded source text used by request construction (terminal-sanitized for display), and names the provider/model. Escape from initial preflight sends nothing. Review's **C** control edits the next request and explicitly warns that previous requests cannot be unsent.
 
 `src/workflow.ts` freezes the eligible context inventory for one invocation. Source exclusions are not replenished and survive a failed retry or candidate-history navigation. A reduced model/revision budget requires inspection before transmission; it never silently changes approved excerpts. Tools require explicit selection and cannot displace user intent to make room. Source inclusion does not establish factual correctness or model attribution.
 
