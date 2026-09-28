@@ -1,15 +1,16 @@
-import type { Theme } from "@earendil-works/pi-coding-agent";
+import type { Theme } from "../host.ts";
 import {
 	Container,
-	decodeKittyPrintable,
-	matchesKey,
+	decodePrintableKey,
 	type SelectItem,
 	SelectList,
 	Spacer,
+	selectListTheme,
 	Text,
 	type TUI,
-} from "@earendil-works/pi-tui";
+} from "../host.ts";
 import { accentBorder, sanitizeForDisplay, sanitizeInline } from "./frame.ts";
+import { bindingLabel, keyHint, matchesBinding } from "./keys.ts";
 
 export interface ChoiceOption {
 	value: string;
@@ -54,13 +55,11 @@ export class PromptChoiceComponent extends Container {
 				? { description: sanitizeInline(option.description) }
 				: {}),
 		}));
-		this.list = new SelectList(items, Math.min(items.length, 8), {
-			selectedPrefix: (text) => theme.fg("accent", text),
-			selectedText: (text) => theme.fg("accent", text),
-			description: (text) => theme.fg("muted", text),
-			scrollInfo: (text) => theme.fg("dim", text),
-			noMatch: (text) => theme.fg("warning", text),
-		});
+		this.list = new SelectList(
+			items,
+			Math.min(items.length, 8),
+			selectListTheme(theme),
+		);
 		this.list.onSelect = (item) => done(item.value);
 		this.list.onCancel = () => done(undefined);
 		this.addChild(this.list);
@@ -68,7 +67,7 @@ export class PromptChoiceComponent extends Container {
 			new Text(
 				theme.fg(
 					"dim",
-					`  ↑↓ navigate · enter select · esc ${sanitizeInline(escapeLabel)}`,
+					`  ${bindingLabel("tui.select.up")}${bindingLabel("tui.select.down")} navigate · ${keyHint("tui.select.confirm", "select")} · ${keyHint("tui.select.cancel", sanitizeInline(escapeLabel))}`,
 				),
 				0,
 				0,
@@ -82,7 +81,7 @@ export class PromptChoiceComponent extends Container {
 		}
 		this.quickSelect = (data: string) => {
 			const key = (
-				decodeKittyPrintable(data) ?? (data.length === 1 ? data : "")
+				decodePrintableKey(data) ?? (data.length === 1 ? data : "")
 			).toLowerCase();
 			const value = quickKeys.get(key);
 			if (value) done(value);
@@ -93,7 +92,7 @@ export class PromptChoiceComponent extends Container {
 	private readonly quickSelect: (data: string) => boolean;
 
 	handleInput(data: string): void {
-		if (matchesKey(data, "escape")) {
+		if (matchesBinding(data, "tui.select.cancel")) {
 			this.list.onCancel?.();
 			return;
 		}

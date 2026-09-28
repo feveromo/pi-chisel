@@ -1,9 +1,10 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
+import type { OptimizerConfig, OptimizerModelPreference } from "./config.ts";
 import type {
+	Api,
 	ExtensionCommandContext,
 	ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
-import type { OptimizerConfig, OptimizerModelPreference } from "./config.ts";
+	Model,
+} from "./host.ts";
 import {
 	modelReference,
 	type ResolvedOptimizerModel,

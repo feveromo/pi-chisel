@@ -1,6 +1,12 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
-import type { TUI } from "@earendil-works/pi-tui";
-import { describe, expect, it, vi } from "vitest";
+import {
+	getKeybindings,
+	KeybindingsManager,
+	setKeybindings,
+	type TUI,
+	TUI_KEYBINDINGS,
+} from "@earendil-works/pi-tui";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PromptReviewComponent } from "../src/ui/review.ts";
 
@@ -31,7 +37,30 @@ function rendered(component: PromptReviewComponent, width = 52): string {
 	return component.render(width).join("\n");
 }
 
+const defaultKeybindings = getKeybindings();
+afterEach(() => setKeybindings(defaultKeybindings));
+
 describe("prompt review", () => {
+	it("follows remapped host selection keys and shows them in hints", () => {
+		setKeybindings(
+			new KeybindingsManager(TUI_KEYBINDINGS, {
+				"tui.select.cancel": "ctrl+g",
+				"tui.select.confirm": "ctrl+o",
+			}),
+		);
+		const { component, onAction } = createReview("old", "new");
+		const output = rendered(component, 82);
+		expect(output).toContain("ctrl+o use this");
+		expect(output).toContain("ctrl+g keep original");
+
+		component.handleInput("\x1b");
+		expect(onAction).not.toHaveBeenCalled();
+		component.handleInput("\x07");
+		expect(onAction).toHaveBeenCalledWith("cancel");
+		component.handleInput("\x0f");
+		expect(onAction).toHaveBeenCalledWith("accept");
+	});
+
 	it("keeps safety and every action discoverable at the minimum width", () => {
 		const { component } = createReview("old", "new");
 		const output = rendered(component);

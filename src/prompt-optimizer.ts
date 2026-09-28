@@ -1,6 +1,6 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { OptimizerConfigStore } from "./config.ts";
 import { PromptOptimizerController } from "./controller.ts";
+import type { ExtensionAPI } from "./host.ts";
 
 export default async function promptOptimizerExtension(
 	pi: ExtensionAPI,

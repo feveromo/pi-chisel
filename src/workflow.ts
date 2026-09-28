@@ -1,4 +1,3 @@
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
 	fitSources,
 	referenceFromSources,
@@ -10,6 +9,7 @@ import {
 	groundingBudget,
 	type OptimizationGrounding,
 } from "./grounding.ts";
+import type { ExtensionContext } from "./host.ts";
 import {
 	friendlyOptimizationError,
 	OPTIMIZER_REQUEST_TIMEOUT_MS,
