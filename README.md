@@ -113,11 +113,13 @@ omp plugin uninstall pi-chisel
 
 Commands:
 
-- `/prompt-optimize <draft>` — optimize an explicit draft. Because slash commands occupy the editor and may trim the outer command line, use the shortcut when byte-for-byte preservation matters.
-- `/prompt-optimize-context <draft>` — inspect the exact bounded context before the first provider request. For shortcut-based preflight, enable **Inspect before sending** in settings.
-- `/prompt-optimize-model` — choose the optimizer model.
-- `/prompt-optimize-settings` — configure context, budget, intensity, preview, model, and shortcut.
-- `/prompt-optimize-restore` — restore the most recently replaced draft when it's still available in memory.
+- `/chisel <draft>` — optimize an explicit draft. Because slash commands occupy the editor and may trim the outer command line, use the shortcut when byte-for-byte preservation matters.
+- `/chisel-context <draft>` — inspect the exact bounded context before the first provider request. For shortcut-based preflight, enable **Inspect before sending** in settings.
+- `/chisel-model` — choose the optimizer model.
+- `/chisel-settings` — configure context, budget, intensity, preview, model, and shortcut.
+- `/chisel-restore` — restore the most recently replaced draft when it's still available in memory.
+
+Upgrading from Pi Chisel 0.1.x? The commands were renamed from `/prompt-optimize*` to `/chisel*`; the shortcut and saved settings are unchanged.
 
 ## Models and settings
 
@@ -135,7 +137,7 @@ The OMP integration uses OMP's authenticated model registry, session-sticky cred
 ~/.omp/agent/prompt-optimizer.json
 ```
 
-Run `/prompt-optimize-settings` to configure either integration. Settings are written atomically with mode `0600` and contain model IDs and UI preferences, never credentials or drafts.
+Run `/chisel-settings` to configure either integration. Settings are written atomically with mode `0600` and contain model IDs and UI preferences, never credentials or drafts.
 
 Default configuration:
 
@@ -164,7 +166,7 @@ Session selection favors explicit references and user turns, retaining the user 
 
 ### Inspect context and select tool evidence
 
-The default shortcut still generates immediately. Enable `inspectContext` or use `/prompt-optimize-context <draft>` when you want approval **before transmission**. Cancelling that initial inspector makes no provider request. **C** during review changes the *next* request; it cannot unsend earlier ones.
+The default shortcut still generates immediately. Enable `inspectContext` or use `/chisel-context <draft>` when you want approval **before transmission**. Cancelling that initial inspector makes no provider request. **C** during review changes the *next* request; it cannot unsend earlier ones.
 
 The inspector shows eligible source labels and bounded excerpts, with terminal controls sanitized for display; only checked sources are queued. During review, **supplied** marks the sources actually sent for that candidate, independently of next-pass checkboxes. These are **sources supplied**, not verified facts or model explanations. Use **↑↓** to select a source, **Space** to include/exclude it, **PgUp/PgDn** or **Home/End** to read the excerpt, **0** for draft-only, and **Enter** to generate. **Escape** discards inspector changes and returns. Excluding sources does not silently pull in replacements.
 
@@ -208,7 +210,7 @@ Additional safeguards:
 - Replacement and restore both verify that the editor still contains the expected text before writing.
 - Shutdown and reload abort active work and dismiss temporary UI.
 
-Chisel's overlays follow the host's selection keybindings (`tui.select.*`), so remapped confirm, cancel, and navigation keys work and appear in the key hints. Both integrations optimize the complete editor draft, not a selected range. The default **Ctrl+Shift+K** binding works in the verified host smoke tests, but a terminal or desktop environment may intercept it; change it through `/prompt-optimize-settings` if needed.
+Chisel's overlays follow the host's selection keybindings (`tui.select.*`), so remapped confirm, cancel, and navigation keys work and appear in the key hints. Both integrations optimize the complete editor draft, not a selected range. The default **Ctrl+Shift+K** binding works in the verified host smoke tests, but a terminal or desktop environment may intercept it; change it through `/chisel-settings` if needed.
 
 ## Develop and test
 

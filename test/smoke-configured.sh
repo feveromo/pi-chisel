@@ -68,7 +68,7 @@ for line in Path(sys.argv[1]).read_text().splitlines():
     if response.get("type") == "response" and response.get("command") == "get_commands":
         commands = response.get("data", {}).get("commands", [])
 
-for name in ("prompt-optimize", "prompt-optimize-context"):
+for name in ("chisel", "chisel-context"):
     command = next((item for item in commands if item.get("name") == name), None)
     if not command or not command.get("sourceInfo", {}).get("path"):
         raise SystemExit(f"Configured Pi did not register {name}")
@@ -80,6 +80,6 @@ for name in ("prompt-optimize", "prompt-optimize-context"):
             raise SystemExit(f"{name} resolves to {entry}, not {expected} or its plain re-export")
 PY
 
-printf 'Configured Pi runtime resolved prompt-optimize from %s\n' "$root/src/prompt-optimizer.ts"
+printf 'Configured Pi runtime resolved /chisel from %s\n' "$root/src/prompt-optimizer.ts"
 PI_CHISEL_CONFIGURED=1 PI_CHISEL_SMOKE_SHORTCUT="$shortcut" PI_BIN="$pi_bin" \
   python3 "$root/test/smoke-tui.py"
