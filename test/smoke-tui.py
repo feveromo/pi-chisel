@@ -235,8 +235,17 @@ send(b"\x1b")
 pump(0.5)
 if "Fresh off the Chisel" in decoded():
     fail("A cancelled Chisel pass reached the review screen")
-if "slow original" not in plain_tail():
-    fail("Cancelling Chisel did not preserve the original draft")
+# Busy configured hosts can redraw far more than the output tail after the
+# overlay opens, and an unchanged editor line is not redrawn. Edit the draft so
+# the renderer must repaint the preserved text, then undo the probe.
+probe_start = len(output)
+send(b"~")
+deadline = time.monotonic() + 8.0
+while b"slow original~" not in output[probe_start:]:
+    if time.monotonic() >= deadline:
+        fail("Cancelling Chisel did not preserve the original draft")
+    pump(0.1)
+send(b"\x7f")
 
 # Clear the preserved draft, then exercise review, replacement, and explicit submission.
 send(b"\x03")  # Ctrl+C clears the editor

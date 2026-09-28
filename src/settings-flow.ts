@@ -1,12 +1,13 @@
-import type {
-	ExtensionCommandContext,
-	ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
 import {
 	findShortcutConflicts,
 	normalizeShortcut,
 	type OptimizerConfig,
 } from "./config.ts";
+import {
+	type ExtensionCommandContext,
+	type ExtensionContext,
+	HOST_NAME,
+} from "./host.ts";
 import {
 	type InvocationHandle,
 	modelIsCurrentAvailable,
@@ -84,7 +85,7 @@ export async function runOptimizerSettings(
 			await showNotice(
 				ctx,
 				"Invalid shortcut",
-				"Use Pi's modifier+key format, for example ctrl+shift+k or f6.",
+				`Use ${HOST_NAME}'s modifier+key format, for example ctrl+shift+k or f6.`,
 			);
 			continue;
 		}
@@ -110,7 +111,7 @@ export async function runOptimizerSettings(
 		await showNotice(
 			ctx,
 			"Shortcut saved",
-			`Pi will reload now so ${shortcut} becomes active.`,
+			`${HOST_NAME} will reload now so ${shortcut} becomes active.`,
 		);
 		await ctx.reload();
 		return;

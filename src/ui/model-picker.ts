@@ -1,17 +1,17 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
-import { rawKeyHint, type Theme } from "@earendil-works/pi-coding-agent";
+import type { OptimizerModelPreference } from "../config.ts";
+import type { Api, Model } from "../host.ts";
 import {
 	Container,
 	type Focusable,
 	fuzzyFilter,
 	Input,
-	matchesKey,
 	Spacer,
 	Text,
+	type Theme,
 	type TUI,
-} from "@earendil-works/pi-tui";
-import type { OptimizerModelPreference } from "../config.ts";
+} from "../host.ts";
 import { accentBorder, sanitizeInline } from "./frame.ts";
+import { keyHint, matchesBinding } from "./keys.ts";
 
 export type ModelPickerResult =
 	| { kind: "current" }
@@ -105,7 +105,7 @@ export class OptimizerModelPicker extends Container implements Focusable {
 			new Text(
 				theme.fg(
 					"dim",
-					`  Type to search · ${rawKeyHint("enter", "select")} · ${rawKeyHint("escape", "close")}`,
+					`  Type to search · ${keyHint("tui.select.confirm", "select")} · ${keyHint("tui.select.cancel", "close")}`,
 				),
 				0,
 				0,
@@ -116,23 +116,23 @@ export class OptimizerModelPicker extends Container implements Focusable {
 	}
 
 	handleInput(data: string): void {
-		if (matchesKey(data, "escape")) {
+		if (matchesBinding(data, "tui.select.cancel")) {
 			this.done(undefined);
 			return;
 		}
-		if (matchesKey(data, "enter")) {
+		if (matchesBinding(data, "tui.select.confirm")) {
 			const entry = this.filteredEntries[this.selectedIndex];
 			if (entry) this.done(entry.result);
 			return;
 		}
-		if (matchesKey(data, "up")) {
+		if (matchesBinding(data, "tui.select.up")) {
 			if (this.filteredEntries.length > 0) {
 				this.selectedIndex =
 					this.selectedIndex === 0
 						? this.filteredEntries.length - 1
 						: this.selectedIndex - 1;
 			}
-		} else if (matchesKey(data, "down")) {
+		} else if (matchesBinding(data, "tui.select.down")) {
 			if (this.filteredEntries.length > 0) {
 				this.selectedIndex =
 					this.selectedIndex === this.filteredEntries.length - 1

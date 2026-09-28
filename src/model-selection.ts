@@ -1,6 +1,10 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { OptimizerModelPreference } from "./config.ts";
+import {
+	type Api,
+	type ExtensionContext,
+	HOST_NAME,
+	type Model,
+} from "./host.ts";
 
 export interface ResolvedOptimizerModel {
 	model: Model<Api>;
@@ -40,7 +44,7 @@ export function resolveOptimizerModel(
 				source: "fallback",
 				warning: configuredExists
 					? `${preference.provider}/${preference.id} is not currently authenticated or available. Using ${modelReference(ctx.model)} for this pass; Chisel's pin stays put.`
-					: `${preference.provider}/${preference.id} is no longer in Pi's model registry. Using ${modelReference(ctx.model)} for this pass; pick another model for Chisel.`,
+					: `${preference.provider}/${preference.id} is no longer in ${HOST_NAME}'s model registry. Using ${modelReference(ctx.model)} for this pass; pick another model for Chisel.`,
 			};
 		}
 
@@ -58,8 +62,10 @@ export function calculateContextBudgetForModel(
 	instructionAndFramingTokens: number,
 ): number {
 	const providerSafetyMargin = 4096;
+	const contextWindow = model.contextWindow;
+	if (contextWindow === null) return configuredBudget;
 	const available =
-		model.contextWindow -
+		contextWindow -
 		draftTokens -
 		outputTokens -
 		instructionAndFramingTokens -

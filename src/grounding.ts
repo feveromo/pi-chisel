@@ -1,5 +1,3 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { OptimizerConfig } from "./config.ts";
 import {
 	buildConversationReference,
@@ -7,6 +5,13 @@ import {
 	toolEvidenceCandidates,
 } from "./context-builder.ts";
 import { analyzeDraft } from "./draft-analysis.ts";
+import {
+	type Api,
+	type ExtensionContext,
+	type Model,
+	sessionEntries,
+	systemPromptText,
+} from "./host.ts";
 import { calculateContextBudgetForModel } from "./model-selection.ts";
 import { buildWorkspaceReference } from "./project-context.ts";
 import {
@@ -108,19 +113,23 @@ export async function buildOptimizationGrounding(
 	if (totalBudget <= 0)
 		return { summary: "draft only · context window is full" };
 
-	const entries = ctx.sessionManager.buildContextEntries();
+	const entries = sessionEntries(ctx);
 	const hasSessionEvidence = extractVisibleContextItems(entries).length > 0;
 	const workspaceLimit = hasSessionEvidence
 		? Math.min(MAX_WORKSPACE_TOKENS_WITH_SESSION, Math.floor(totalBudget * 0.4))
 		: Math.min(totalBudget, MAX_WORKSPACE_TOKENS_FRESH_SESSION);
 
 	let systemPrompt = "";
-	let trusted = false;
 	try {
-		systemPrompt = ctx.getSystemPrompt();
-		trusted = ctx.isProjectTrusted();
+		systemPrompt = systemPromptText(ctx);
 	} catch {
 		// Workspace extraction still works if the runtime prompt is unavailable.
+	}
+	let trusted = false;
+	try {
+		trusted = ctx.isProjectTrusted();
+	} catch {
+		// Treat an unknown trust state as untrusted.
 	}
 	const workspace = await buildWorkspaceReference({
 		cwd: ctx.cwd,

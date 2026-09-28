@@ -1,12 +1,13 @@
+import type { OptimizerIntensity } from "./config.ts";
 import {
 	type Api,
 	type AssistantMessage,
 	type AssistantMessageEventStream,
+	HOST_NAME,
 	type Model,
-	uuidv7,
-} from "@earendil-works/pi-ai";
-import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
-import type { OptimizerIntensity } from "./config.ts";
+	type ModelRegistry,
+	streamOptimizerModel,
+} from "./host.ts";
 import type {
 	OptimizationReference,
 	OptimizationRevision,
@@ -125,17 +126,6 @@ export async function runPromptOptimization(
 		signal,
 		onTextDelta,
 	} = options;
-	// Pi installs packages without enforcing peer ranges, so check the API here.
-	if (typeof modelRegistry.streamSimple !== "function")
-		throw new PromptOptimizationError("Pi Chisel requires Pi 0.87.1 or newer.");
-	const provider = modelRegistry.getProvider(model.provider);
-	if (!provider)
-		throw new PromptOptimizationError(
-			`Pi no longer has provider “${model.provider}”.`,
-		);
-
-	const auth = await modelRegistry.getApiKeyAndHeaders(model);
-	if (!auth.ok) throw new PromptOptimizationError(auth.error);
 	if (signal.aborted) throw new PromptOptimizationCancelledError();
 
 	const request = buildOptimizationRequest(
@@ -152,7 +142,10 @@ export async function runPromptOptimization(
 		model.maxTokens,
 		Boolean(model.reasoning),
 	);
-	if (request.estimatedInputTokens + maxTokens + 4096 > model.contextWindow) {
+	if (
+		model.contextWindow !== null &&
+		request.estimatedInputTokens + maxTokens + 4096 > model.contextWindow
+	) {
 		throw new PromptOptimizationError(
 			`This request is too long for ${model.provider}/${model.id} without truncating your text. Choose a larger model or shorten the candidate or feedback.`,
 		);
@@ -160,21 +153,13 @@ export async function runPromptOptimization(
 
 	let stream: AssistantMessageEventStream;
 	try {
-		// Pi normalizes system instructions and applies credential-specific base URLs.
-		stream = modelRegistry.streamSimple(model, request.context, {
-			...(!model.reasoning ? { temperature: 0.2 } : {}),
-			...(model.reasoning ? { reasoning: "minimal" as const } : {}),
-			...(auth.apiKey ? { apiKey: auth.apiKey } : {}),
-			...(auth.headers ? { headers: auth.headers } : {}),
-			...(auth.env ? { env: auth.env } : {}),
+		stream = await streamOptimizerModel(model, modelRegistry, request.context, {
 			signal,
 			maxTokens,
-			cacheRetention: "none",
-			sessionId: uuidv7(),
 			timeoutMs: options.timeoutMs ?? OPTIMIZER_REQUEST_TIMEOUT_MS,
-			maxRetries: 0,
 		});
 	} catch (error) {
+		if (signal.aborted) throw new PromptOptimizationCancelledError();
 		throw new PromptOptimizationError(
 			error instanceof Error ? error.message : String(error),
 		);
@@ -193,7 +178,7 @@ export function friendlyOptimizationError(error: unknown): string {
 	if (/429|rate.?limit/i.test(message))
 		return "Chisel's model is rate-limited. Your original draft is still untouched.";
 	if (/401|403|unauth|api key|credential|login/i.test(message)) {
-		return `Pi could not authenticate Chisel's model: ${message}`;
+		return `${HOST_NAME} could not authenticate Chisel's model: ${message}`;
 	}
 	if (/network|fetch|socket|econn|enotfound|timed?\s*out/i.test(message)) {
 		return `Chisel could not reach the provider: ${message}`;

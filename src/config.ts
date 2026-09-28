@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import type { KeyId } from "@earendil-works/pi-tui";
+import type { KeyId } from "./host.ts";
+import { getAgentDir } from "./host.ts";
 
 export type ContextMode = "none" | "recent" | "auto";
 export type OptimizerIntensity = "light" | "standard" | "strong";
