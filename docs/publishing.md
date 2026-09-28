@@ -15,7 +15,6 @@ From the native Pi checkout:
 git branch --show-current # must be pi
 npm ci --ignore-scripts --legacy-peer-deps
 npm run validate
-npm run pack:check
 ```
 
 `validate` includes a configured-runtime smoke check and expects this checkout to
@@ -27,7 +26,7 @@ was `0.1.0`; subsequent releases need an unused npm version. The existing Git ta
 `pi-v0.1.0` predates this npm release and is not a source tag for this artifact.
 
 The catalog preview uses `pi.image`, pointing to the PNG shipped in npm release
-`0.1.1` through jsDelivr. Keep that version-pinned URL for later releases unless
+`0.1.2` through jsDelivr. Keep that version-pinned URL for later releases unless
 the screenshot changes. When replacing the screenshot, point the URL at the new
 release containing it and verify the image URL after publishing.
 
