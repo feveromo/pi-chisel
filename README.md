@@ -34,13 +34,13 @@ Cancel while Chisel works; the original stays untouched:
 
 </details>
 
-Captured from native Pi **0.85.0** using a deterministic faux provider and synthetic prompts. These show the real UI, not measured model quality. [Reproduce the captures](docs/screenshots.md).
+Captured from native Pi **0.87.1** using a deterministic faux provider and synthetic prompts. These show the real UI, not measured model quality. [Reproduce the captures](docs/screenshots.md).
 
 ## Install
 
 ### Pi
 
-The native Pi package targets `@earendil-works/pi-coding-agent` **0.84.1**, with TUI smoke tests on **0.84.1** and **0.85.0**. Configure a model through `/login` or `/model`.
+The native Pi package requires Pi **0.87.1 or newer**. Typechecks, unit tests, and PTY smoke tests are verified on **0.87.1**. Configure a model through `/login` or `/model`.
 
 Install the native Pi integration from npm:
 
@@ -70,7 +70,7 @@ The older pinned release remains available as `@pi-v0.1.0`; it does not contain 
 
 ### OMP integration
 
-The secondary OMP integration is verified against OMP **17.2.11** and its canonical `@oh-my-pi/*` APIs. Later OMP versions may work but aren't part of this release's tested compatibility boundary. Configure a model through `/login` or `/model`, then install:
+The secondary OMP integration is verified against OMP **18.3.5** and its canonical `@oh-my-pi/*` APIs. Later OMP versions may work but aren't part of the tested compatibility boundary. Configure a model through `/login` or `/model`, then install:
 
 ```bash
 omp plugin install github:feveromo/pi-chisel
@@ -85,7 +85,7 @@ omp plugin list
 From a main-branch checkout, run the OMP integration directly without installing it:
 
 ```bash
-omp --no-extensions -e ./src/index.ts
+omp --no-extensions -e ./src/prompt-optimizer.ts
 ```
 
 Uninstall it with:
@@ -129,7 +129,7 @@ The Pi integration uses Pi's registered provider and resolved authentication, in
 ~/.pi/agent/prompt-optimizer.json
 ```
 
-The OMP integration uses OMP's authenticated model registry, credential resolver, provider headers, and credential-specific base URL. Its settings are stored separately at:
+The OMP integration uses OMP's authenticated model registry, session-sticky credential resolver, the model's resolved header chain, and the provider's configured base URL. Its settings are stored separately at:
 
 ```text
 ~/.omp/agent/prompt-optimizer.json
@@ -158,11 +158,9 @@ Default configuration:
 - `recent` — considers recent dialogue and workspace evidence without the relevance filter, still prioritizing user intent within the budget.
 - `none` — omits all reference evidence. Revisions still include the original, candidate, and feedback.
 
-Workspace context can include the project name, relative working directory, branch, manifest summary, README overview, top-level landmarks, and in-project guidance already loaded by the host. Pi honors its project-trust boundary and doesn't inspect untrusted project files. Neither integration adds absolute workspace identity paths, includes guidance outside the project root, or follows metadata-file symlinks. Source contents can themselves contain paths or sensitive material: this is not a general redactor.
+Workspace context can include the project name, relative working directory, branch, manifest summary, README overview, top-level landmarks, and in-project guidance already loaded by the host. Both integrations honor the host's project-trust boundary: in an untrusted project, only workspace identity is used and project files aren't inspected. Neither integration adds absolute workspace identity paths, includes guidance outside the project root, or follows metadata-file symlinks. Source contents can themselves contain paths or sensitive material: this is not a general redactor.
 
 Session selection favors explicit references and user turns, retaining the user instruction associated with a matching assistant reply. It labels summaries as lossy evidence, keeps selected items chronological, and prioritizes complete constraint-bearing sentences/lines when excerpts must shrink. Thinking, hidden entries, extension metadata, telemetry, and diagnostics remain excluded. Tool traffic is excluded by default; see the opt-in below. The exact original, revision candidate/feedback, and output allowance take priority over context.
-
-OMP 17.2.11 doesn't expose Pi's project-trust predicate to extensions. Use `none` in OMP when Pi Chisel must not inspect or send workspace or session context.
 
 ### Inspect context and select tool evidence
 
@@ -210,11 +208,11 @@ Additional safeguards:
 - Replacement and restore both verify that the editor still contains the expected text before writing.
 - Shutdown and reload abort active work and dismiss temporary UI.
 
-Pi 0.84.1 and OMP 17.2.11 expose the whole editor buffer but no selection or cursor-range operation, so both integrations optimize the complete draft. The default **Ctrl+Shift+K** binding is unclaimed by both verified host versions, but a terminal or desktop environment may intercept it; change it through `/prompt-optimize-settings` if needed.
+Chisel's overlays follow the host's selection keybindings (`tui.select.*`), so remapped confirm, cancel, and navigation keys work and appear in the key hints. Both integrations optimize the complete editor draft, not a selected range. The default **Ctrl+Shift+K** binding works in the verified host smoke tests, but a terminal or desktop environment may intercept it; change it through `/prompt-optimize-settings` if needed.
 
 ## Develop and test
 
-The integrations have separate runtime branches because they compile against different host APIs.
+The integrations have separate runtime branches because they compile against different host APIs. All host imports and host-specific behavior live in `src/host.ts`; every other file under `src/` is identical on both branches. Make shared changes on one branch and copy those files to the other, then check that `git diff main pi -- src ':!src/host.ts'` is empty. Tests, fixtures, and packaging stay branch-specific.
 
 ### Pi checkout
 
@@ -226,7 +224,7 @@ pi install .
 npm run validate
 ```
 
-The Pi validation suite runs formatting and lint checks, TypeScript, unit tests, an isolated Pi PTY smoke test, and `npm run smoke:configured` against the linked checkout.
+The Pi validation suite runs formatting and lint checks, TypeScript, unit tests, package inspection, an isolated Pi PTY smoke test, and `npm run smoke:configured` against the linked checkout.
 
 ### OMP checkout
 
@@ -239,7 +237,7 @@ npm run validate
 npm run smoke:configured
 ```
 
-The OMP validation suite also runs a production dependency audit, package inspection, an OMP 17.2.11 PTY smoke test, and a clean packaged-install smoke test.
+The OMP validation suite also runs a production dependency audit, package inspection, an OMP 18.3.5 PTY smoke test, and a clean packaged-install smoke test.
 
 The regression suite covers context selection, opt-in/exclusion, provider request boundaries, feedback cancellation, retry recovery, candidate history, no-op acceptance, and editor/shutdown races. Both PTY suites exercise preflight without transmission, context exclusion, feedback, failed/cancelled retries, candidate recovery, and review-before-replacement/no automatic submission. Twenty-five synthetic good/bad editorial examples and a human-review rubric are in [`docs/editorial-quality.md`](docs/editorial-quality.md). Deterministic tests are not live-model quality scores.
 
