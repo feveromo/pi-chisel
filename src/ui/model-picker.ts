@@ -10,7 +10,7 @@ import {
 	type Theme,
 	type TUI,
 } from "../host.ts";
-import { accentBorder, sanitizeInline } from "./frame.ts";
+import { FramedContainer, sanitizeInline } from "./frame.ts";
 import { keyHint, matchesBinding } from "./keys.ts";
 
 export type ModelPickerResult =
@@ -25,7 +25,7 @@ interface PickerEntry {
 	selected: boolean;
 }
 
-export class OptimizerModelPicker extends Container implements Focusable {
+export class OptimizerModelPicker extends FramedContainer implements Focusable {
 	readonly width = 82;
 	private readonly searchInput = new Input();
 	private readonly listContainer = new Container();
@@ -51,7 +51,7 @@ export class OptimizerModelPicker extends Container implements Focusable {
 		preference: OptimizerModelPreference | null,
 		private readonly done: (result: ModelPickerResult | undefined) => void,
 	) {
-		super();
+		super(theme, "✦ Chisel · model");
 		const currentDescription = currentModel
 			? `${sanitizeInline(currentModel.provider)}/${sanitizeInline(currentModel.id)} · follows future chat-model changes`
 			: "No chat model is currently selected";
@@ -85,16 +85,15 @@ export class OptimizerModelPicker extends Container implements Focusable {
 			this.allEntries.findIndex((entry) => entry.selected),
 		);
 
-		this.addChild(accentBorder(theme));
 		this.addChild(
 			new Text(
-				theme.fg("accent", theme.bold("  ✦ Choose Chisel's model")),
+				theme.fg(
+					"muted",
+					"Choose the model Chisel uses. Your chat model stays put.",
+				),
 				0,
 				0,
 			),
-		);
-		this.addChild(
-			new Text(theme.fg("muted", "  Your active chat model stays put."), 0, 0),
 		);
 		this.addChild(new Spacer(1));
 		this.addChild(this.searchInput);
@@ -105,13 +104,12 @@ export class OptimizerModelPicker extends Container implements Focusable {
 			new Text(
 				theme.fg(
 					"dim",
-					`  Type to search · ${keyHint("tui.select.confirm", "select")} · ${keyHint("tui.select.cancel", "close")}`,
+					`Type to search · ${keyHint("tui.select.confirm", "select")} · ${keyHint("tui.select.cancel", "close")}`,
 				),
 				0,
 				0,
 			),
 		);
-		this.addChild(accentBorder(theme));
 		this.updateList();
 	}
 

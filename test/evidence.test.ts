@@ -9,6 +9,7 @@ import {
 	fitSources,
 	referenceFromSources,
 	referenceSources,
+	summarizeSources,
 } from "../src/evidence.ts";
 import {
 	buildOptimizationRequest,
@@ -132,6 +133,29 @@ describe("intent-aware evidence", () => {
 		expect(kept.map((s) => s.id)).toEqual(["user"]);
 		expect(referenceSources(referenceFromSources(kept))).toEqual(kept);
 		expect(referenceFromSources([])).toBeUndefined();
+	});
+	it("summarizes supplied sources without empty counts or wrong plurals", () => {
+		const source = (id: string, kind: ContextSource["kind"]) => ({
+			id,
+			kind,
+			label: id,
+			text: `${id} text`,
+			truncated: false,
+		});
+		expect(summarizeSources([source("u", "user")])).toMatch(
+			/^1 message · ~\d+ tokens$/,
+		);
+		expect(
+			summarizeSources([
+				source("w", "workspace"),
+				source("u", "user"),
+				source("a", "assistant"),
+				source("s", "session-summary"),
+				source("t", "tool"),
+			]),
+		).toMatch(
+			/^workspace \+ 2 messages \+ 1 summary \+ 1 selected tool result · ~\d+ tokens$/,
+		);
 	});
 });
 

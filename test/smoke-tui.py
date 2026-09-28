@@ -105,9 +105,9 @@ else:
 command.extend(
     [
         "--provider",
-        "prompt-optimizer-faux",
+        "chisel-demo",
         "--model",
-        "faux-model",
+        "scripted-model",
     ]
 )
 process = subprocess.Popen(
@@ -220,10 +220,10 @@ pump(0.2)
 # Preflight is a real transmission boundary, not a post-hoc privacy claim.
 send(b"/chisel-context inspect this draft")
 send(b"\r")
-wait_for("Before Chisel sends")
+wait_for("Chisel · before sending")
 if request_count() != 0:
     fail("Initial context inspection sent a provider request")
-capture.save("pi-chisel-context", "Before Chisel sends", "esc back")
+capture.save("pi-chisel-context", "Chisel · before sending", "esc back")
 send(b"\x1b")
 # Keep Escape separate: a slow host can read "\x1b\x03" as ctrl+alt+c.
 pump(0.4)
@@ -232,10 +232,10 @@ send(b"\x03")
 # Escape must cancel an active request and preserve the original editor draft.
 send(b"slow original")
 send(kitty_shortcut(shortcut))
-wait_for("Pi Chisel at Work")
+wait_for("Chisel · working")
 wait_for("Shaping a sharper prompt")
 wait_for("keep original")
-capture.save("pi-chisel-invoking", "Pi Chisel at Work", "keep original")
+capture.save("pi-chisel-invoking", "Chisel · working", "keep original")
 send(b"\x1b")
 pump(0.5)
 if "Fresh off the Chisel" in decoded():
@@ -285,7 +285,7 @@ wait_for("ORIGINAL")
 
 # Context exclusion regenerates; feedback and failed/cancelled retries keep a candidate.
 send(b"c")
-wait_for("Context supplied")
+wait_for("context for the next pass")
 if request_count() != 2:
     fail("Opening the review inspector sent a request")
 send(b"0")

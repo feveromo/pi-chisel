@@ -32,14 +32,21 @@ export interface InvocationHandle {
 	dismiss: (() => void) | undefined;
 }
 
+/** Wider overlays make prompt text harder to read, not easier. */
+const OVERLAY_MAX_COLUMNS = 100;
+
 export const PROMPT_OVERLAY = {
 	overlay: true,
-	overlayOptions: {
-		width: "72%" as const,
+	// Resolved as each overlay opens: 72% of the terminal, capped for readability.
+	overlayOptions: () => ({
+		width: Math.min(
+			OVERLAY_MAX_COLUMNS,
+			Math.floor((process.stdout.columns || 120) * 0.72),
+		),
 		minWidth: 52,
 		maxHeight: "84%" as const,
 		margin: 1,
-	},
+	}),
 };
 
 export async function showChoice(

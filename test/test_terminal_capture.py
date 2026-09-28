@@ -93,6 +93,24 @@ class CaptureTests(unittest.TestCase):
         self.assertNotIn("OUTSIDE", texts)
         self.assertIn("Chisel", texts)
 
+    def test_titled_frame_starts_at_the_marker_row(self):
+        svg = render_svg(
+            screen_for(
+                [
+                    "OUTSIDE OUTSIDE OUTSIDE OUTSIDE",
+                    "OUTSIDE ╭─ Chisel ─╮ OUTSIDE",
+                    "OUTSIDE │ esc back │ OUTSIDE",
+                    "OUTSIDE ╰──────────╯ OUTSIDE",
+                ]
+            ),
+            "review",
+            "Chisel",
+            "esc back",
+        )
+        texts = "".join(ET.fromstring(svg).itertext()).replace("\n", "")
+        self.assertNotIn("OUTSIDE", texts)
+        self.assertIn("Chisel", texts)
+
     def test_checked_in_images_are_clean_xml(self):
         images = list(
             (Path(__file__).resolve().parents[1] / "docs/images").glob(

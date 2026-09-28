@@ -1,30 +1,23 @@
 import {
-	Container,
+	type Component,
 	createProgressLoader,
-	Spacer,
-	Text,
 	type Theme,
 	type TUI,
+	visibleWidth,
 } from "../host.ts";
-import { accentBorder, sanitizeInline } from "./frame.ts";
+import { overlayFrame, sanitizeInline, wrapPlainText } from "./frame.ts";
 import { keyHint } from "./keys.ts";
 
-export class PromptOptimizationLoader extends Container {
+export class PromptOptimizationLoader implements Component {
 	private readonly loader: ReturnType<typeof createProgressLoader>;
 
 	constructor(
 		tui: TUI,
-		theme: Theme,
-		modelRef: string,
-		contextSummary: string,
-		warning?: string,
+		private readonly theme: Theme,
+		private readonly modelRef: string,
+		private readonly contextSummary: string,
+		private readonly warning?: string,
 	) {
-		super();
-		this.addChild(accentBorder(theme));
-		this.addChild(
-			new Text(theme.fg("accent", theme.bold("  ✦ Pi Chisel at Work")), 0, 0),
-		);
-		this.addChild(new Spacer(1));
 		this.loader = createProgressLoader(
 			tui,
 			(text) => theme.fg("accent", text),
@@ -32,33 +25,6 @@ export class PromptOptimizationLoader extends Container {
 			"Shaping a sharper prompt…",
 			["·", "○", "◌", "●", "◌", "○"],
 		);
-		this.addChild(this.loader);
-		this.addChild(
-			new Text(theme.fg("muted", `  Model: ${sanitizeInline(modelRef)}`), 0, 0),
-		);
-		this.addChild(
-			new Text(
-				theme.fg(
-					"muted",
-					`  Context supplied: ${sanitizeInline(contextSummary)}`,
-				),
-				0,
-				0,
-			),
-		);
-		if (warning)
-			this.addChild(
-				new Text(theme.fg("warning", `  ${sanitizeInline(warning)}`), 0, 0),
-			);
-		this.addChild(new Spacer(1));
-		this.addChild(
-			new Text(
-				theme.fg("dim", `  ${keyHint("tui.select.cancel", "keep original")}`),
-				0,
-				0,
-			),
-		);
-		this.addChild(accentBorder(theme));
 	}
 
 	get signal(): AbortSignal {
@@ -79,6 +45,37 @@ export class PromptOptimizationLoader extends Container {
 
 	handleInput(data: string): void {
 		this.loader.handleInput(data);
+	}
+
+	render(width: number): string[] {
+		const inner = Math.max(10, width - 4);
+		// Details hang under the status text, past the spinner and its space.
+		const detail = (text: string, color: "muted" | "warning") =>
+			wrapPlainText(sanitizeInline(text), Math.max(1, inner - 3)).map(
+				(line) => `   ${this.theme.fg(color, line)}`,
+			);
+		// Host loaders lead with a blank row; the frame supplies that spacing.
+		const status = this.loader
+			.render(inner)
+			.filter((line) => visibleWidth(line.trim()) > 0);
+		return overlayFrame(
+			this.theme,
+			width,
+			[
+				...status,
+				...detail(`Model: ${this.modelRef}`, "muted"),
+				...detail(`Context supplied: ${this.contextSummary}`, "muted"),
+				...(this.warning ? detail(this.warning, "warning") : []),
+				"",
+				` ${this.theme.fg("dim", keyHint("tui.select.cancel", "keep original"))}`,
+			],
+			true,
+			{ title: "✦ Chisel · working" },
+		);
+	}
+
+	invalidate(): void {
+		this.loader.invalidate();
 	}
 
 	dispose(): void {

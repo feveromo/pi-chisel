@@ -59,7 +59,7 @@ Pi’s `EditorComponent` contract in `@earendil-works/pi-tui/dist/editor-compone
 - `BorderedLoader` and `CancellableLoader` establish Pi’s native spinner/AbortSignal pattern in `dist/modes/interactive/components/bordered-loader.js` and `@earendil-works/pi-tui/dist/components/cancellable-loader.d.ts`.
 - Theme tokens and helpers are documented in `docs/themes.md`.
 
-Pi Chisel composes only native `Container`, `Text`, `Input`, `SelectList`, `SettingsList`, `CancellableLoader`, `DynamicBorder`, key matching, fuzzy filtering, and theme functions. Every view is transient; there is no widget, footer, status, header, or transcript entry. The visible journey uses one product voice: **Pi Chisel at Work** while generating, **Fresh off the Chisel** for review, and **Chiseled draft ready** after replacement. Model, grounding, unsent status, and destructive choices stay literal so the personality never obscures behavior.
+Pi Chisel composes only native `Container`, `Text`, `Input`, `SelectList`, `SettingsList`, `CancellableLoader`, key matching, fuzzy filtering, and theme functions. Every view is transient; there is no widget, footer, status, header, or transcript entry. Every overlay uses the same rounded frame (`src/ui/frame.ts`) with its title set into the top border, capped at 100 columns so prompt text stays readable. The visible journey uses one product voice: **Chisel · working** while generating, **Fresh off the Chisel** for review, and **Chiseled draft ready** after replacement. Model, grounding, unsent status, and destructive choices stay literal so the personality never obscures behavior.
 
 ## Layered grounding context
 
@@ -121,7 +121,7 @@ The model preference is either `null` for “follow current chat model” or `{ 
 2. It resolves a pinned/current model and computes remaining grounding capacity after reserving the full draft, instruction, output, reference framing, and provider safety margin.
 3. It builds trusted workspace evidence plus a compaction-aware recent-session window. A fresh session still receives workspace grounding.
 4. Workspace evidence, session evidence, deterministic draft metadata, and the exact draft are placed in separate explicit boundaries under the optimizer instruction.
-5. A native cancellable **Pi Chisel at Work** overlay streams one provider request.
+5. A native cancellable **Chisel · working** overlay streams one provider request.
 6. A **Fresh off the Chisel** overlay names the model and context supplied, then offers use, tune, focused changes/navigation, full views, context inspection, feedback-driven retry, model selection, previous candidate, or keeping the original. Its copy explicitly states that using the result cannot submit.
 7. Acceptance re-reads the editor. An exact match allows replacement; any mismatch forces replace/merge/cancel choice.
 8. A temporary confirmation overlay offers immediate restore. Replacement/restore recheck the editor and invocation lifetime after asynchronous merge/conflict dialogs before writing.

@@ -34,7 +34,6 @@ export type {
 	UserMessage,
 } from "@earendil-works/pi-ai";
 export {
-	DynamicBorder,
 	type ExtensionAPI,
 	type ExtensionCommandContext,
 	type ExtensionContext,
@@ -121,8 +120,9 @@ export function createProgressLoader(
 	message: string,
 	frames: string[],
 ): CancellableLoader {
+	// Pi draws custom indicator frames verbatim, so color them here.
 	return new CancellableLoader(tui, spinnerColor, messageColor, message, {
-		frames,
+		frames: frames.map(spinnerColor),
 		intervalMs: 90,
 	});
 }

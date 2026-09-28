@@ -125,15 +125,22 @@ export function referenceFromSources(
 export function summarizeSources(sources: readonly ContextSource[]): string {
 	const reference = referenceFromSources(sources);
 	if (!reference) return "draft only · no context supplied";
+	const count = (value: number, singular: string, plural: string) =>
+		`${value} ${value === 1 ? singular : plural}`;
+	const messages = reference.conversation?.messageCount ?? 0;
+	const summaries = reference.conversation?.summaryCount ?? 0;
 	const parts = [
 		...(reference.workspace ? ["workspace"] : []),
-		...(reference.conversation
-			? [
-					`${reference.conversation.messageCount} messages · ${reference.conversation.summaryCount} summaries`,
-				]
-			: []),
+		...(messages > 0 ? [count(messages, "message", "messages")] : []),
+		...(summaries > 0 ? [count(summaries, "summary", "summaries")] : []),
 		...(reference.tools
-			? [`${reference.tools.sources.length} selected tool results`]
+			? [
+					count(
+						reference.tools.sources.length,
+						"selected tool result",
+						"selected tool results",
+					),
+				]
 			: []),
 	];
 	return `${parts.join(" + ")} · ~${reference.estimatedTokens} tokens`;

@@ -73,10 +73,11 @@ describe("prompt review", () => {
 		expect(output).toContain("CHISELED");
 		expect(output).toContain("use this");
 		expect(output).toContain("tune it");
-		expect(output).toContain("compare");
+		expect(output).toContain("tab switch view");
 		expect(output).toContain("another pass");
 		expect(output).toContain("switch model");
 		expect(output).toContain("keep original");
+		expect(output.split("\n")[0]).toMatch(/^╭─ ✦ Fresh off the Chisel ─+╮$/);
 		expect(output).not.toContain("Prompt Review");
 		expect(output).not.toContain("OPTIMIZED");
 	});
@@ -89,12 +90,12 @@ describe("prompt review", () => {
 
 		component.handleInput("\t");
 		const diff = rendered(component, 82);
-		expect(diff).toContain("CHANGES");
+		expect(diff).toContain("chiseled   CHANGES   original");
 		expect(diff).toContain("--- original");
 		expect(diff).toContain("+++ chiseled");
 
 		component.handleInput("\t");
-		expect(rendered(component, 82)).toContain("ORIGINAL");
+		expect(rendered(component, 82)).toContain("chiseled   changes   ORIGINAL");
 		component.handleInput("\r");
 		expect(onAction).toHaveBeenCalledWith("accept");
 		expect(requestRender).toHaveBeenCalled();
@@ -126,10 +127,12 @@ describe("prompt review", () => {
 		).join("\n");
 		const { component } = createReview("old", optimized);
 
-		expect(rendered(component, 82)).toContain("Rows 1–11 of 30");
+		// The scroll position sits in the bottom border.
+		const bottom = () => component.render(82).at(-1) ?? "";
+		expect(bottom()).toMatch(/^╰─+ rows 1–13 of 30 · ↑↓ PgUp\/PgDn ─╯$/);
 		component.handleInput("\x1b[6~");
-		expect(rendered(component, 82)).toContain("Rows 12–22 of 30");
+		expect(bottom()).toContain("rows 14–26 of 30");
 		component.handleInput("\x1b[F");
-		expect(rendered(component, 82)).toContain("Rows 20–30 of 30");
+		expect(bottom()).toContain("rows 18–30 of 30");
 	});
 });

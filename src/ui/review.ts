@@ -190,28 +190,32 @@ export class PromptReviewComponent implements Component {
 		);
 	}
 
+	/** The three views as tabs: the active one in accent capitals, so it reads without color too. */
 	private heading(): string {
+		const unchanged = this.options.optimized === this.options.original;
+		const tabs = (
+			[
+				["optimized", unchanged ? "already good" : "chiseled"],
+				["diff", "changes"],
+				["original", "original"],
+			] as const
+		)
+			.map(([view, label]) =>
+				view === this.view
+					? this.theme.fg("accent", this.theme.bold(label.toUpperCase()))
+					: this.theme.fg("dim", label),
+			)
+			.join("   ");
+		const separator = this.theme.fg("dim", "  ·  ");
 		if (this.view === "diff") {
 			const coarse = this.diff.coarse ? " · coarse comparison" : "";
-			return `${this.theme.fg("accent", this.theme.bold("CHANGES"))}${this.theme.fg("dim", " · ")}${this.theme.fg("success", `+${this.diff.addedCharacters}`)}${this.theme.fg("dim", " / ")}${this.theme.fg("error", `-${this.diff.removedCharacters}`)}${this.theme.fg("dim", ` chars${coarse}`)}`;
+			return `${tabs}${separator}${this.theme.fg("success", `+${this.diff.addedCharacters}`)}${this.theme.fg("dim", " / ")}${this.theme.fg("error", `-${this.diff.removedCharacters}`)}${this.theme.fg("dim", ` chars${coarse}`)}`;
 		}
 		const shown =
 			this.view === "optimized"
 				? this.options.optimized
 				: this.options.original;
-		const label =
-			this.view === "optimized"
-				? this.options.optimized === this.options.original
-					? "ALREADY GOOD"
-					: "CHISELED"
-				: "ORIGINAL";
-		return `${this.theme.fg("accent", this.theme.bold(label))}${this.theme.fg("dim", ` · ${shown.length.toLocaleString()} chars`)}`;
-	}
-
-	private tabLabel(): string {
-		if (this.view === "optimized") return "compare";
-		if (this.view === "diff") return "show original";
-		return "show chiseled";
+		return `${tabs}${separator}${this.theme.fg("dim", `${shown.length.toLocaleString()} chars`)}`;
 	}
 
 	private wrappedRow(
@@ -230,7 +234,7 @@ export class PromptReviewComponent implements Component {
 		this.lastWidth = inner;
 		this.previewRows = Math.max(
 			3,
-			Math.min(20, Math.floor((this.tui.terminal?.rows ?? 42) * 0.84) - 24),
+			Math.min(20, Math.floor((this.tui.terminal?.rows ?? 42) * 0.84) - 22),
 		);
 		const content = this.contentRows(inner);
 		this.renderedLineCount = content.length;
@@ -246,7 +250,6 @@ export class PromptReviewComponent implements Component {
 		}
 
 		const body = [
-			` ${this.theme.fg("accent", this.theme.bold("✦ Fresh off the Chisel"))}`,
 			...this.wrappedRow(`Model: ${this.options.modelRef}`, "muted", inner),
 			...this.wrappedRow(
 				`Context supplied: ${this.options.contextSummary}`,
@@ -267,15 +270,13 @@ export class PromptReviewComponent implements Component {
 			...viewport.items.map((line) => `  ${line}`),
 		];
 
-		if (viewport.hasOverflow) {
-			const first = viewport.offset + 1;
-			const last = viewport.offset + viewport.items.length;
-			body.push(
-				` ${this.theme.fg("muted", `Rows ${first}–${last} of ${viewport.total} · ${bindingLabel("tui.select.up")}${bindingLabel("tui.select.down")} or ${bindingLabel("tui.select.pageUp")}/${bindingLabel("tui.select.pageDown")} scroll`)}`,
-			);
-		}
+		const first = viewport.offset + 1;
+		const last = viewport.offset + viewport.items.length;
+		const status = viewport.hasOverflow
+			? `rows ${first}–${last} of ${viewport.total} · ${bindingLabel("tui.select.up")}${bindingLabel("tui.select.down")} ${bindingLabel("tui.select.pageUp")}/${bindingLabel("tui.select.pageDown")}`
+			: undefined;
 
-		const primary = `${keyHint("tui.select.confirm", "use this")}  ${rawKeyHint("e", "tune it")}  ${rawKeyHint("tab", this.tabLabel())}`;
+		const primary = `${keyHint("tui.select.confirm", "use this")}  ${rawKeyHint("e", "tune it")}  ${rawKeyHint("tab", "switch view")}`;
 		const secondary = `${rawKeyHint("r", "another pass")}  ${rawKeyHint("c", "context")}  ${rawKeyHint("m", "switch model")}${this.options.hasPrevious ? "  b previous candidate" : ""}`;
 		const exit = keyHint("tui.select.cancel", "keep original");
 		const primaryRows = wrapTextWithAnsi(
@@ -303,7 +304,10 @@ export class PromptReviewComponent implements Component {
 			...exitRows,
 		);
 
-		return overlayFrame(this.theme, width, body, true);
+		return overlayFrame(this.theme, width, body, true, {
+			title: "✦ Fresh off the Chisel",
+			...(status ? { status } : {}),
+		});
 	}
 
 	invalidate(): void {}
