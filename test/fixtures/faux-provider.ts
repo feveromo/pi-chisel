@@ -5,7 +5,10 @@ import type {
 	Model,
 	SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
-import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
+import {
+	createAssistantMessageEventStream,
+	getSystemMessageText,
+} from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 let optimizationCount = 0;
@@ -74,8 +77,11 @@ export default function fauxProvider(pi: ExtensionAPI): void {
 		streamSimple(model, context, options?: SimpleStreamOptions) {
 			const stream = createAssistantMessageEventStream();
 			const input = textFromLastUser(context);
-			const optimizing =
-				context.systemPrompt?.includes("Pi Chisel's prompt editor") ?? false;
+			const optimizing = context.messages.some(
+				(message) =>
+					message.role === "system" &&
+					getSystemMessageText(message).includes("Pi Chisel's prompt editor"),
+			);
 			if (optimizing) {
 				optimizationCount += 1;
 				if (process.env.CHISEL_SMOKE_COUNTER)

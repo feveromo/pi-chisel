@@ -56,22 +56,6 @@ function responseText(response: AssistantMessage): string {
 	return text;
 }
 
-async function resolveRequestModel(
-	model: Model<Api>,
-	modelRegistry: ModelRegistry,
-): Promise<Model<Api>> {
-	try {
-		const providerAuth = await modelRegistry.getProviderAuth(model.provider);
-		return providerAuth?.auth.baseUrl
-			? { ...model, baseUrl: providerAuth.auth.baseUrl }
-			: model;
-	} catch (error) {
-		throw new PromptOptimizationError(
-			error instanceof Error ? error.message : String(error),
-		);
-	}
-}
-
 async function consumeOptimizationStream(
 	stream: AssistantMessageEventStream,
 	signal: AbortSignal,
@@ -141,6 +125,9 @@ export async function runPromptOptimization(
 		signal,
 		onTextDelta,
 	} = options;
+	// Pi installs packages without enforcing peer ranges, so check the API here.
+	if (typeof modelRegistry.streamSimple !== "function")
+		throw new PromptOptimizationError("Pi Chisel requires Pi 0.87.1 or newer.");
 	const provider = modelRegistry.getProvider(model.provider);
 	if (!provider)
 		throw new PromptOptimizationError(
@@ -149,7 +136,6 @@ export async function runPromptOptimization(
 
 	const auth = await modelRegistry.getApiKeyAndHeaders(model);
 	if (!auth.ok) throw new PromptOptimizationError(auth.error);
-	const requestModel = await resolveRequestModel(model, modelRegistry);
 	if (signal.aborted) throw new PromptOptimizationCancelledError();
 
 	const request = buildOptimizationRequest(
@@ -174,7 +160,8 @@ export async function runPromptOptimization(
 
 	let stream: AssistantMessageEventStream;
 	try {
-		stream = provider.streamSimple(requestModel, request.context, {
+		// Pi normalizes system instructions and applies credential-specific base URLs.
+		stream = modelRegistry.streamSimple(model, request.context, {
 			...(!model.reasoning ? { temperature: 0.2 } : {}),
 			...(model.reasoning ? { reasoning: "minimal" as const } : {}),
 			...(auth.apiKey ? { apiKey: auth.apiKey } : {}),

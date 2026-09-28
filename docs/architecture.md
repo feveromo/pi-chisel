@@ -1,6 +1,6 @@
-# Verified Pi 0.84.1 architecture
+# Native Pi architecture
 
-Pi Chisel's native Pi integration is designed and tested against `@earendil-works/pi-coding-agent` **0.84.1**. Source references below are relative to that installed package unless another package is named.
+Pi Chisel's native Pi integration is tested against `@earendil-works/pi-coding-agent` **0.87.1**. The line-numbered UI/lifecycle references below record the original **0.84.1** inspection and may have moved. The model invocation section describes the current 0.87.1 API. Source paths are relative to the installed Pi package unless another package is named.
 
 ## Extension lifecycle and discovery
 
@@ -75,30 +75,25 @@ Explicitly referential drafts receive expanded conversation capacity; short self
 
 ## Model registry, provider invocation, and transcript isolation
 
-`ExtensionContext` exposes the current model, scoped models, and `ModelRegistry` at `dist/core/extensions/types.d.ts:223-237`. The registry’s public facade is `dist/core/model-registry.d.ts:19-42`:
+`ExtensionContext` exposes the current model, scoped models, and `ModelRegistry`. The registry’s public facade is `dist/core/model-registry.d.ts`:
 
 - `getAvailable()` supplies authenticated models.
 - `find()` detects removed pins.
 - `getProvider()` returns the registered provider implementation.
 - `getApiKeyAndHeaders(model)` resolves request credentials, model-specific headers, and provider environment.
-- `getProviderAuth(provider)` retains credential-specific request data such as an OAuth-derived base URL.
+- `streamSimple(model, context, options)` delegates to `ModelRuntime`, normalizes the ordinary request context, and handles request-time authentication, including credential-specific base URLs.
 
-The native provider contract is `@earendil-works/pi-ai/dist/models.d.ts:42-79`. Every provider owns a generic `streamSimple(model, context, options)` implementation and returns an `AssistantMessageEventStream`.
-
-Pi does **not** expose `ModelRuntime.streamSimple()` directly on `ExtensionContext` or `ModelRegistry`. The internal all-in-one request preparation is visible at `dist/core/model-runtime.js:309-348`, while first-party `examples/extensions/qna.ts` and `handoff.ts` show the established side-channel pattern of resolving registry auth and invoking pi-ai outside `AgentSession`.
+Pi 0.87.1 raw providers require a normalized `TranscriptContext`, not the request builder's ordinary `Context`. Calling the provider directly bypasses conversion of the optimizer's `systemPrompt` into a leading system message. Chisel uses the registry boundary; a real-registry/faux-provider regression verifies that the provider receives both system instructions and the user draft.
 
 Pi Chisel uses the strongest public boundary available without modifying core:
 
 1. Resolve the selected model from `ModelRegistry`.
 2. Fetch its registered `Provider`.
-3. Resolve model-specific headers/environment with `getApiKeyAndHeaders(model)`.
-4. Resolve credential-specific base URL with `getProviderAuth(provider)` and project it onto a request-local model copy.
-5. Call `provider.streamSimple()` with a fresh side-channel session ID, `cacheRetention: "none"`, `maxRetries: 0`, a bounded output cap, the overlay AbortSignal, and temperature `0.2` for non-reasoning models to reduce gratuitous variation.
-6. Consume text deltas and validate the final stop reason and non-empty text. Unchanged output is valid at every intensity and preserves the original bytes. Revisions supply the original, candidate, and explicit editing feedback as separate bounded sections.
+3. Resolve model-specific headers/environment with `getApiKeyAndHeaders(model)`, failing early with a readable error when authentication is missing.
+4. Call `modelRegistry.streamSimple()` with a fresh side-channel session ID, `cacheRetention: "none"`, `maxRetries: 0`, a bounded output cap, the overlay AbortSignal, and temperature `0.2` for non-reasoning models to reduce gratuitous variation.
+5. Consume text deltas and validate the final stop reason and non-empty text. Unchanged output is valid at every intensity and preserves the original bytes. Revisions supply the original, candidate, and explicit editing feedback as separate bounded sections.
 
 No method on `AgentSession`, `SessionManager`, or `ExtensionAPI` is used to send or append the optimizer request. As a result, neither request nor response enters the active branch, session JSONL, LLM context, transcript renderer, or usage footer.
-
-A small future core improvement would be a public `ctx.modelRegistry.streamSimple()` delegating to `ModelRuntime.streamSimple()`. That would centralize request preparation and extension request hooks. It is not required for the installed providers because the existing public provider and auth APIs expose the needed pieces.
 
 ## Context inspection and revision state
 

@@ -136,8 +136,8 @@ async function harness(
 		getProviderHeaders: () => ({}),
 		resolver: () => async () => "synthetic",
 		getProvider: () => ({ streamSimple: stream }),
+		streamSimple: stream,
 		getApiKeyAndHeaders: async () => ({ ok: true }),
-		getProviderAuth: async () => undefined,
 	};
 	const tui = {
 		requestRender() {},
