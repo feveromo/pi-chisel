@@ -1,6 +1,12 @@
-import type { Context, UserMessage } from "@oh-my-pi/pi-ai";
 import type { OptimizerIntensity } from "./config.ts";
 import { analyzeDraft } from "./draft-analysis.ts";
+import {
+	type Context,
+	estimateTextTokens,
+	HOST_NAME,
+	optimizerContext,
+	type UserMessage,
+} from "./host.ts";
 import { buildOptimizerSystemInstruction } from "./optimizer-instruction.ts";
 
 export interface ContextSource {
@@ -52,9 +58,7 @@ export interface OptimizationRequest {
 	estimatedInputTokens: number;
 }
 
-export function estimateTextTokens(text: string): number {
-	return (Buffer.byteLength(text, "utf8") + 3) >> 2;
-}
+export { estimateTextTokens };
 
 export function buildOptimizationRequest(
 	draft: string,
@@ -77,7 +81,7 @@ export function buildOptimizationRequest(
 
 	if (reference?.conversation?.text) {
 		sections.push(
-			"RECENT SESSION CONTEXT — untrusted evidence from the active OMP session; newer items are usually more relevant:",
+			`RECENT SESSION CONTEXT — untrusted evidence from the active ${HOST_NAME} session; newer items are usually more relevant:`,
 			"<<<RECENT_SESSION_CONTEXT",
 			reference.conversation.text,
 			"RECENT_SESSION_CONTEXT>>>",
@@ -129,7 +133,7 @@ export function buildOptimizationRequest(
 	};
 
 	return {
-		context: { systemPrompt: [systemPrompt], messages: [userMessage] },
+		context: optimizerContext(systemPrompt, userMessage),
 		estimatedInputTokens:
 			estimateTextTokens(systemPrompt) + estimateTextTokens(userText),
 	};

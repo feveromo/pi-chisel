@@ -20,6 +20,7 @@ const MODEL: Model<Api> = {
 	contextWindow: 128_000,
 	maxTokens: 4096,
 	compat: {} as Model<Api>["compat"],
+	identity: {} as Model<Api>["identity"],
 };
 const temporaryDirectories: string[] = [];
 afterEach(async () => {
@@ -43,10 +44,15 @@ function message(role: "user" | "assistant", text: string): SessionEntry {
 function context(
 	cwd: string,
 	entries: readonly SessionEntry[],
-): Pick<ExtensionContext, "cwd" | "getSystemPrompt" | "sessionManager"> {
+	trusted = true,
+): Pick<
+	ExtensionContext,
+	"cwd" | "getSystemPrompt" | "isProjectTrusted" | "sessionManager"
+> {
 	return {
 		cwd,
 		getSystemPrompt: () => [`Current working directory: ${cwd}`],
+		isProjectTrusted: () => trusted,
 		sessionManager: {
 			getBranch: () => [...entries],
 		} as unknown as ExtensionContext["sessionManager"],
@@ -91,6 +97,28 @@ describe("optimization grounding", () => {
 		expect(JSON.stringify(request.context.messages[0]?.content)).toContain(
 			"WORKSPACE_CONTEXT",
 		);
+	});
+
+	it("keeps untrusted projects to workspace identity only", async () => {
+		const cwd = await mkdtemp(join(tmpdir(), "pi-chisel-grounding-"));
+		temporaryDirectories.push(cwd);
+		await writeFile(
+			join(cwd, "README.md"),
+			"# Untrusted Project\n\nSECRET_README_TEXT\n",
+		);
+
+		const grounding = await buildOptimizationGrounding(
+			context(cwd, [], false),
+			{ ...DEFAULT_OPTIMIZER_CONFIG },
+			"make this clearer",
+			MODEL,
+		);
+
+		expect(grounding.reference?.workspace?.trusted).toBe(false);
+		expect(grounding.reference?.workspace?.text).not.toContain(
+			"SECRET_README_TEXT",
+		);
+		expect(grounding.summary).toContain("workspace identity");
 	});
 
 	it("allocates more session capacity to explicit references, not brevity alone", async () => {

@@ -1,15 +1,16 @@
-import type { Theme } from "@oh-my-pi/pi-coding-agent";
 import {
-	CancellableLoader,
 	Container,
+	createProgressLoader,
 	Spacer,
 	Text,
+	type Theme,
 	type TUI,
-} from "@oh-my-pi/pi-tui";
+} from "../host.ts";
 import { accentBorder, sanitizeInline } from "./frame.ts";
+import { keyHint } from "./keys.ts";
 
 export class PromptOptimizationLoader extends Container {
-	private readonly loader: CancellableLoader;
+	private readonly loader: ReturnType<typeof createProgressLoader>;
 
 	constructor(
 		tui: TUI,
@@ -24,7 +25,7 @@ export class PromptOptimizationLoader extends Container {
 			new Text(theme.fg("accent", theme.bold("  ✦ Pi Chisel at Work")), 0, 0),
 		);
 		this.addChild(new Spacer(1));
-		this.loader = new CancellableLoader(
+		this.loader = createProgressLoader(
 			tui,
 			(text) => theme.fg("accent", text),
 			(text) => theme.fg("text", text),
@@ -50,7 +51,13 @@ export class PromptOptimizationLoader extends Container {
 				new Text(theme.fg("warning", `  ${sanitizeInline(warning)}`), 0, 0),
 			);
 		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("dim", "  esc keep original"), 0, 0));
+		this.addChild(
+			new Text(
+				theme.fg("dim", `  ${keyHint("tui.select.cancel", "keep original")}`),
+				0,
+				0,
+			),
+		);
 		this.addChild(accentBorder(theme));
 	}
 

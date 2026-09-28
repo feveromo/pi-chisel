@@ -1,14 +1,15 @@
-import type { Theme } from "@oh-my-pi/pi-coding-agent";
+import { referenceFromSources } from "../evidence.ts";
+import type { Theme } from "../host.ts";
 import {
 	type Component,
 	decodePrintableKey,
 	matchesKey,
 	type TUI,
-	truncateToWidth,
-} from "@oh-my-pi/pi-tui";
-import { referenceFromSources } from "../evidence.ts";
+	truncateLine,
+} from "../host.ts";
 import type { ContextSource } from "../request-builder.ts";
 import { overlayFrame, sanitizeInline, wrapPlainText } from "./frame.ts";
+import { bindingLabel, keyHint, matchesBinding } from "./keys.ts";
 import { sliceViewport } from "./viewport.ts";
 
 export interface ContextInspectorOptions {
@@ -40,26 +41,25 @@ export class ContextInspector implements Component {
 		return this.options.sources.filter((s) => this.selected.has(s.id));
 	}
 	handleInput(data: string): void {
-		if (matchesKey(data, "escape")) {
+		if (matchesBinding(data, "tui.select.cancel")) {
 			this.options.onDone(undefined);
 			return;
 		}
-		if (matchesKey(data, "enter")) {
+		if (matchesBinding(data, "tui.select.confirm")) {
 			this.options.onDone(this.selection());
 			return;
 		}
-		if (matchesKey(data, "up") || matchesKey(data, "down")) {
+		const up = matchesBinding(data, "tui.select.up");
+		if (up || matchesBinding(data, "tui.select.down")) {
 			this.index = Math.max(
 				0,
-				Math.min(
-					this.options.sources.length - 1,
-					this.index + (matchesKey(data, "up") ? -1 : 1),
-				),
+				Math.min(this.options.sources.length - 1, this.index + (up ? -1 : 1)),
 			);
 			this.offset = 0;
-		} else if (matchesKey(data, "pageUp"))
+		} else if (matchesBinding(data, "tui.select.pageUp"))
 			this.offset = Math.max(0, this.offset - this.previewRows);
-		else if (matchesKey(data, "pageDown")) this.offset += this.previewRows;
+		else if (matchesBinding(data, "tui.select.pageDown"))
+			this.offset += this.previewRows;
 		else if (matchesKey(data, "home")) this.offset = 0;
 		else if (matchesKey(data, "end")) this.offset = Number.MAX_SAFE_INTEGER;
 		else {
@@ -136,8 +136,13 @@ export class ContextInspector implements Component {
 					"Source inclusion is not verification. Preview is display-sanitized.",
 				this.warning ? "warning" : "muted",
 			),
-			...row("↑↓ source · space include/exclude · t tools · 0 none"),
-			...row("PgUp/PgDn excerpt · enter generate · esc back", "accent"),
+			...row(
+				`${bindingLabel("tui.select.up")}${bindingLabel("tui.select.down")} source · space include/exclude · t tools · 0 none`,
+			),
+			...row(
+				`${bindingLabel("tui.select.pageUp")}/${bindingLabel("tui.select.pageDown")} excerpt · ${keyHint("tui.select.confirm", "generate")} · ${keyHint("tui.select.cancel", "back")}`,
+				"accent",
+			),
 		];
 		const available = Math.max(
 			5,
@@ -163,7 +168,7 @@ export class ContextInspector implements Component {
 			.map((s, index) => {
 				const selected = this.selected.has(s.id);
 				const focused = listStart + index === this.index;
-				return ` ${theme.fg(focused ? "accent" : "muted", truncateToWidth(`${focused ? "›" : " "} [${selected ? "x" : " "}] ${options.suppliedIds?.includes(s.id) ? "supplied · " : ""}${sanitizeInline(s.label)}${s.truncated ? " · excerpt" : ""}`, inner))}`;
+				return ` ${theme.fg(focused ? "accent" : "muted", truncateLine(`${focused ? "›" : " "} [${selected ? "x" : " "}] ${options.suppliedIds?.includes(s.id) ? "supplied · " : ""}${sanitizeInline(s.label)}${s.truncated ? " · excerpt" : ""}`, inner))}`;
 			});
 		this.previewRows = Math.max(2, available - list.length);
 		const lines = wrapPlainText(

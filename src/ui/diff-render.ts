@@ -1,5 +1,5 @@
-import type { Theme } from "@oh-my-pi/pi-coding-agent";
-import { wrapTextWithAnsi } from "@oh-my-pi/pi-tui";
+import type { Theme } from "../host.ts";
+import { wrapTextWithAnsi } from "../host.ts";
 import type { DiffPart, PromptDiff } from "./diff.ts";
 import { sanitizeForDisplay } from "./frame.ts";
 
