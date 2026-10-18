@@ -46,7 +46,7 @@ export function excerpt(
 		.split(/\n+|(?<=[.!?。！？])\s+/u)
 		.map((text, index) => ({ text: text.trim(), index }))
 		.filter((unit) => unit.text);
-	// ponytail: lexical relevance and English constraint cues; explicit source review covers ambiguous/multilingual intent.
+	// lexical relevance and English constraint cues; explicit source review covers ambiguous/multilingual intent.
 	const ranked = units.toSorted((a, b) => {
 		const score = (unit: typeof a) =>
 			(protectConstraints && CONSTRAINT_PATTERN.test(unit.text) ? 100 : 0) +
