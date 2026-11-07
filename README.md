@@ -2,11 +2,11 @@
 
 Chisel is a [Pi](https://pi.dev) extension that turns a rough prompt draft into a clearer one and shows you the result before anything changes. It never submits for you.
 
-Type `fix the login bug`, press **Ctrl+Shift+K**, and review what comes back:
+Type a rough draft, press **Ctrl+Shift+K**, and review what comes back:
 
-![Chisel's review overlay with the rewritten login-bug prompt, a note that it's still unsent, and the available keys](docs/images/pi-chisel-review.svg)
+![A rough draft typed into Pi, then Ctrl+Shift+K, Chisel's rewrite and its changes, and the rewrite placed in the editor unsent](https://cdn.jsdelivr.net/gh/feveromo/pi-chisel@pi-v0.2.3/docs/images/pi-chisel-demo.gif)
 
-*Captured in Pi 0.87.1 with a scripted model, so it shows the real UI but not real rewrite quality. [How the screenshots are made](docs/screenshots.md).*
+*Recorded in Pi 1.5.0 with Claude Opus 5.5 in a small demo project. The rewrite is the model's real output; only the wait for it is cut short. [How it's recorded](docs/screenshots.md#demo-gif).*
 
 Use the rewrite, edit it, compare it with your original, send it back for another pass with notes, or throw it away. Your draft stays put until you accept, and accepting only swaps the editor text.
 
@@ -28,13 +28,13 @@ To install from Git instead, use `pi install git:github.com/feveromo/pi-chisel@p
 
 ### OMP
 
-A separate build for [OMP](https://omp.sh) (oh-my-pi) lives on the `main` branch. It's tested on OMP 18.4.0; later versions may work but aren't tested. Set up a model with `/login` or `/model`, then:
+A separate build for [OMP](https://omp.sh) (oh-my-pi) lives on the `main` branch and is published as `omp-chisel`. It's tested on OMP 18.4.0; later versions may work but aren't tested. Set up a model with `/login` or `/model`, then:
 
 ```bash
-omp plugin install github:feveromo/pi-chisel
+omp plugin install omp-chisel
 ```
 
-Run `/reload` or start a new session, and check it with `omp plugin list`. Remove it with `omp plugin uninstall pi-chisel`. To run it from a `main` checkout without installing:
+Run `/reload` or start a new session, and check it with `omp plugin list`. Remove it with `omp plugin uninstall omp-chisel`. If you installed it from GitHub before it was on npm, remove that copy first with `omp plugin uninstall pi-chisel`. To run it from a `main` checkout without installing:
 
 ```bash
 omp --no-extensions -e ./src/prompt-optimizer.ts

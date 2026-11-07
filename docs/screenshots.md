@@ -1,6 +1,6 @@
 # Reproduce the README screenshots
 
-The README uses native Pi **0.87.1** captures from the actual PTY smoke flow with a deterministic faux provider. The prompt and response are synthetic. These are UI demonstrations, not evidence of real-model editorial quality.
+The README's still screenshots use native Pi **0.87.1** captures from the actual PTY smoke flow with a deterministic faux provider. The prompt and response are synthetic. These are UI demonstrations, not evidence of real-model editorial quality.
 
 From the native `pi` branch, with `pi` on PATH and development dependencies installed:
 
@@ -53,3 +53,20 @@ PY
 
 Inspect the PNG before publishing. The version-pinned public image URL is
 documented in [publishing.md](publishing.md).
+
+## Demo GIF
+
+The animation at the top of the README shows a real rewrite. `test/record-demo.py` drives Pi in a pseudo-terminal through one real request to a real model and turns whole-screen frames into a GIF. Pi runs with a throwaway agent directory, quiet startup, and only Chisel plus the provider extension you pass, in a generated demo project at `/tmp/tasknest`, so none of your settings, sessions, or files appear. The model's output differs on every run, and the wait for it is cut to about two seconds of spinner.
+
+From the native `pi` branch, with `ffmpeg` and the Python GObject and librsvg setup above installed:
+
+```bash
+uv run --with pyte test/record-demo.py docs/images/pi-chisel-demo.gif \
+  --model claude-bridge/claude-opus-5-5 \
+  --extension path/to/pi-claude-bridge/src/index.ts \
+  --agent-file ~/.pi/agent/claude-bridge.json
+```
+
+`--extension` loads the model's provider, and `--agent-file` copies a provider's non-secret config into the throwaway agent directory; never pass credential files. `--draft` changes the typed text, and `--keep-frames DIR` keeps the SVG and PNG frames. Watch the whole GIF before committing it, and keep the README caption's Pi version and model accurate.
+
+The README loads the GIF from jsDelivr pinned to a release tag (`cdn.jsdelivr.net/gh/feveromo/pi-chisel@pi-vX.Y.Z/docs/images/pi-chisel-demo.gif`), so it renders the same on GitHub, npm, and the Pi catalog, and `package.json` leaves it out of the npm package. After re-recording, point the URL at the release tag that contains the new GIF.
