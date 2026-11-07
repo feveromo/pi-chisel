@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 FONT = "DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+CELL_WIDTH, LINE_HEIGHT, PADDING, HEADER = 8.8, 21, 22, 42
 COLORS = {
     "black": "#11151d",
     "red": "#ff6b7a",
@@ -64,6 +65,63 @@ def color(value: str, default: str = "#d8dee9") -> str:
     return COLORS.get(value, default)
 
 
+def frame_chrome(width: int, height: int, title: str, radius: int = 12) -> list[str]:
+    return [
+        f'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img">',
+        f"<title>{html.escape(title)}</title>",
+        f'<rect x="0.5" y="0.5" width="{width - 1}" height="{height - 1}" rx="{radius}" fill="#0b0f14" stroke="#273142"/>',
+        f'<text x="{PADDING}" y="26" fill="#c099ff" font-family="{FONT}" font-size="12">PI CHISEL</text>',
+        f'<text x="{width - PADDING}" y="26" text-anchor="end" fill="#8b98ad" font-family="{FONT}" font-size="12">{html.escape(title)}</text>',
+        f'<path d="M 0 {HEADER} H {width}" stroke="#273142"/>',
+    ]
+
+
+def render_cells(
+    screen: Any, rows: range, first_column: int, last_column: int
+) -> list[str]:
+    svg = []
+    for row_index, source_row in enumerate(rows):
+        top = HEADER + PADDING + row_index * LINE_HEIGHT
+        row = screen.buffer[source_row]
+        column = first_column
+        while column <= last_column:
+            char = row[column]
+            x = PADDING + (column - first_column) * CELL_WIDTH
+            fg, bg = color(char.fg), color(char.bg, "#0b0f14")
+            if char.reverse:
+                fg, bg = bg, fg
+            if char.bg != "default" or char.reverse:
+                svg.append(
+                    f'<rect x="{x:.1f}" y="{top}" width="{CELL_WIDTH}" height="{LINE_HEIGHT}" fill="{bg}"/>'
+                )
+            if char.data in EDGES:
+                cx, cy = x + CELL_WIDTH / 2, top + LINE_HEIGHT / 2
+                points = {
+                    "l": (x, cy),
+                    "r": (x + CELL_WIDTH, cy),
+                    "u": (cx, top),
+                    "d": (cx, top + LINE_HEIGHT),
+                }
+                path = " ".join(
+                    f"M {cx:.1f} {cy:.1f} L {points[e][0]:.1f} {points[e][1]:.1f}"
+                    for e in EDGES[char.data]
+                )
+                svg.append(
+                    f'<path d="{path}" fill="none" stroke="{fg}" stroke-width="1"/>'
+                )
+            elif char.data.strip():
+                # Keep each terminal cell positioned independently, including
+                # continuation cells for wide glyphs. No font-dependent run drift.
+                cells = 2 if column < last_column and row[column + 1].data == "" else 1
+                weight = ' font-weight="700"' if char.bold else ""
+                svg.append(
+                    f'<text x="{x:.1f}" y="{top + 15}" fill="{fg}"{weight} font-family="{FONT}" '
+                    f'font-size="14" textLength="{CELL_WIDTH * cells:.1f}" lengthAdjust="spacingAndGlyphs">{html.escape(char.data)}</text>'
+                )
+            column += 1
+    return svg
+
+
 def render_svg(screen: Any, title: str, marker: str, footer: str) -> str:
     display = screen.display
     marker_row = next((i for i, line in enumerate(display) if marker in line), None)
@@ -109,56 +167,23 @@ def render_svg(screen: Any, title: str, marker: str, footer: str) -> str:
         )
         if right is not None:
             first_column, last_column = left, right
-    cell_width, line_height, padding, header = 8.8, 21, 22, 42
-    width = round((last_column - first_column + 1) * cell_width + padding * 2)
-    height = header + len(rows) * line_height + padding * 2
-    svg = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img">',
-        f"<title>{html.escape(title)}</title>",
-        f'<rect x="0.5" y="0.5" width="{width - 1}" height="{height - 1}" rx="12" fill="#0b0f14" stroke="#273142"/>',
-        f'<text x="{padding}" y="26" fill="#c099ff" font-family="{FONT}" font-size="12">PI CHISEL</text>',
-        f'<text x="{width - padding}" y="26" text-anchor="end" fill="#8b98ad" font-family="{FONT}" font-size="12">{html.escape(title)}</text>',
-        f'<path d="M 0 42 H {width}" stroke="#273142"/>',
-    ]
-    for row_index, source_row in enumerate(range(first_row, last_row + 1)):
-        top = header + padding + row_index * line_height
-        row = screen.buffer[source_row]
-        column = first_column
-        while column <= last_column:
-            char = row[column]
-            x = padding + (column - first_column) * cell_width
-            fg, bg = color(char.fg), color(char.bg, "#0b0f14")
-            if char.reverse:
-                fg, bg = bg, fg
-            if char.bg != "default" or char.reverse:
-                svg.append(
-                    f'<rect x="{x:.1f}" y="{top}" width="{cell_width}" height="{line_height}" fill="{bg}"/>'
-                )
-            if char.data in EDGES:
-                cx, cy = x + cell_width / 2, top + line_height / 2
-                points = {
-                    "l": (x, cy),
-                    "r": (x + cell_width, cy),
-                    "u": (cx, top),
-                    "d": (cx, top + line_height),
-                }
-                path = " ".join(
-                    f"M {cx:.1f} {cy:.1f} L {points[e][0]:.1f} {points[e][1]:.1f}"
-                    for e in EDGES[char.data]
-                )
-                svg.append(
-                    f'<path d="{path}" fill="none" stroke="{fg}" stroke-width="1"/>'
-                )
-            elif char.data.strip():
-                # Keep each terminal cell positioned independently, including
-                # continuation cells for wide glyphs. No font-dependent run drift.
-                cells = 2 if column < last_column and row[column + 1].data == "" else 1
-                weight = ' font-weight="700"' if char.bold else ""
-                svg.append(
-                    f'<text x="{x:.1f}" y="{top + 15}" fill="{fg}"{weight} font-family="{FONT}" '
-                    f'font-size="14" textLength="{cell_width * cells:.1f}" lengthAdjust="spacingAndGlyphs">{html.escape(char.data)}</text>'
-                )
-            column += 1
+    width = round((last_column - first_column + 1) * CELL_WIDTH + PADDING * 2)
+    height = HEADER + len(rows) * LINE_HEIGHT + PADDING * 2
+    svg = frame_chrome(width, height, title)
+    svg += render_cells(screen, range(first_row, last_row + 1), first_column, last_column)
+    svg.append("</svg>\n")
+    return "\n".join(svg)
+
+
+def render_screen_svg(screen: Any, title: str) -> str:
+    """Render every cell, for demo animation frames rather than cropped stills."""
+    if any("\ufffd" in line for line in screen.display):
+        raise ValueError("Replacement glyph in screenshot; check UTF-8 decoding")
+    width = round(screen.columns * CELL_WIDTH + PADDING * 2)
+    height = HEADER + screen.lines * LINE_HEIGHT + PADDING * 2
+    # GIF has 1-bit transparency, so rounded corners would leave jagged halos.
+    svg = frame_chrome(width, height, title, radius=0)
+    svg += render_cells(screen, range(screen.lines), 0, screen.columns - 1)
     svg.append("</svg>\n")
     return "\n".join(svg)
 

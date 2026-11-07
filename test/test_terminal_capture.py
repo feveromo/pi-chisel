@@ -6,7 +6,7 @@ from collections import defaultdict
 from types import SimpleNamespace
 from pathlib import Path
 
-from terminal_capture import color, render_svg, terminal_decoder
+from terminal_capture import color, render_screen_svg, render_svg, terminal_decoder
 
 
 def screen_for(lines):
@@ -18,6 +18,7 @@ def screen_for(lines):
     columns = max(map(len, lines))
     return SimpleNamespace(
         columns=columns,
+        lines=len(lines),
         display=lines,
         buffer={
             i: defaultdict(character, {j: character(c) for j, c in enumerate(line)})
@@ -110,6 +111,23 @@ class CaptureTests(unittest.TestCase):
         texts = "".join(ET.fromstring(svg).itertext()).replace("\n", "")
         self.assertNotIn("OUTSIDE", texts)
         self.assertIn("Chisel", texts)
+
+    def test_demo_frames_keep_the_whole_screen(self):
+        svg = render_screen_svg(
+            screen_for(["> fix it", "╭─ Chisel ─╮", "╰──────────╯", "footer"]),
+            "review & compare",
+        )
+        texts = "".join(ET.fromstring(svg).itertext()).replace("\n", "")
+        self.assertIn(">fixit", texts)
+        self.assertIn("footer", texts)
+        self.assertIn("review & compare", texts)
+        self.assertNotIn("╭", svg)
+        # GIF frames cannot anti-alias rounded corners against the page.
+        self.assertIn('rx="0"', svg)
+
+    def test_demo_frames_reject_replacement_glyphs(self):
+        with self.assertRaises(ValueError):
+            render_screen_svg(screen_for(["Chisel �"]), "test")
 
     def test_checked_in_images_are_clean_xml(self):
         images = list(

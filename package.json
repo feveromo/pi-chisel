@@ -22,7 +22,8 @@
 		"README.md",
 		"LICENSE",
 		"SECURITY.md",
-		"docs"
+		"docs",
+		"!docs/images/*.gif"
 	],
 	"keywords": [
 		"pi-package",
