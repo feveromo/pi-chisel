@@ -28,13 +28,13 @@ To install from Git instead, use `pi install git:github.com/feveromo/pi-chisel@p
 
 ### OMP
 
-A separate build for [OMP](https://omp.sh) (oh-my-pi) lives on the `main` branch. It's tested on OMP 18.4.0; later versions may work but aren't tested. Set up a model with `/login` or `/model`, then:
+A separate build for [OMP](https://omp.sh) (oh-my-pi) lives on the `main` branch and is published as `omp-chisel`. It's tested on OMP 18.4.0; later versions may work but aren't tested. Set up a model with `/login` or `/model`, then:
 
 ```bash
-omp plugin install github:feveromo/pi-chisel
+omp plugin install omp-chisel
 ```
 
-Run `/reload` or start a new session, and check it with `omp plugin list`. Remove it with `omp plugin uninstall pi-chisel`. To run it from a `main` checkout without installing:
+Run `/reload` or start a new session, and check it with `omp plugin list`. Remove it with `omp plugin uninstall omp-chisel`. If you installed it from GitHub before it was on npm, remove that copy first with `omp plugin uninstall pi-chisel`. To run it from a `main` checkout without installing:
 
 ```bash
 omp --no-extensions -e ./src/prompt-optimizer.ts

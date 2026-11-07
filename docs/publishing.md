@@ -1,7 +1,8 @@
 # Publishing Pi Chisel
 
 Publish the native Pi integration from the `pi` branch. The `main` branch contains
-the separate OMP integration and is intentionally private on npm.
+the separate OMP integration, published as `omp-chisel`; its own
+`docs/publishing.md` covers that release.
 
 The [Pi package catalog](https://pi.dev/packages) discovers npm packages with the
 `pi-package` keyword. This branch already declares that keyword and the native
