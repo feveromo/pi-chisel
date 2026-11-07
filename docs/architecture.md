@@ -118,6 +118,6 @@ The repository verifies three layers:
 - `npm test`: deterministic request, grounding, model-selection, UI framing, sanitization, and replacement contracts under Bun's test runner.
 - `npm run test:smoke`: the supported OMP TUI in a PTY with isolated Chisel and faux-provider extensions. It exercises shortcut dispatch, cancellation, review modes, replacement, restore safety, and delayed explicit submission.
 - `npm run smoke:install`: packs the public payload, installs it into a temporary clean OMP home, verifies OMP discovers the packaged plugin, and repeats the PTY flow against that installed copy.
-- `npm run smoke:configured`: confirms the enabled `pi-chisel` plugin resolves to this checkout, checks the effective Ghostty shortcut map, and repeats the PTY flow with the user's configured OMP extensions loaded.
+- `npm run smoke:configured`: confirms the enabled `omp-chisel` plugin resolves to this checkout, checks the effective Ghostty shortcut map, and repeats the PTY flow with the user's configured OMP extensions loaded.
 
 `npm run validate` runs formatting checks, TypeScript, contract tests, a production dependency audit, package inspection, and both portable OMP smoke paths. The configured-runtime smoke is separate because it intentionally depends on the developer's local OMP setup.

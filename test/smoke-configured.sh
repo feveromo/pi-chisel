@@ -29,9 +29,10 @@ fi
 
 "$omp_bin" plugin list --json >"$output"
 
-plugin_path=$(jq -er '
+package_name=$(jq -er .name "$root/package.json")
+plugin_path=$(jq -er --arg name "$package_name" '
   .npm[]
-  | select(.name == "pi-chisel" and .enabled == true)
+  | select(.name == $name and .enabled == true)
   | .path
 ' "$output")
 configured_entry=$(realpath "$plugin_path/src/prompt-optimizer.ts")

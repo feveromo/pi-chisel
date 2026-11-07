@@ -1,11 +1,14 @@
 {
-	"name": "pi-chisel",
-	"version": "0.1.0",
-	"private": true,
-	"description": "Pi Chisel turns rough drafts into clear, reviewable prompts before submission.",
+	"name": "omp-chisel",
+	"version": "0.2.2",
+	"description": "Turn rough drafts into clear prompts in OMP: review, compare, and refine before replacing your editor text. Never auto-submits.",
 	"license": "MIT",
 	"author": "feveromo",
 	"homepage": "https://github.com/feveromo/pi-chisel#readme",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/feveromo/pi-chisel.git"
